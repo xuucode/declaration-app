@@ -20,18 +20,10 @@ const ShareButton = ({ declarationId, title, type, onShare }: ShareButtonProps) 
   return (
     <button
       onClick={handleShare}
-      style={{
-        backgroundColor: '#000000',
-        color: '#ffffff',
-        padding: '12px 24px',
-        border: 'none',
-        borderRadius: '8px',
-        cursor: 'pointer',
-        fontSize: '16px',
-        width: '100%',
-      }}
+      className="w-full flex items-center justify-center gap-2 bg-black text-white font-semibold py-3 rounded-lg hover:bg-gray-900 transition-colors border border-gray-700"
     >
-      𝕏 でシェアする
+      <span className="text-lg font-bold">𝕏</span>
+      でシェアする
     </button>
   );
 };

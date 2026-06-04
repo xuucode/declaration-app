@@ -6,6 +6,28 @@ import { v4 as uuidv4 } from 'uuid';
 import { uploadOgpImage } from '../ogp/uploadOgp.js';
 import { OgpType } from '../ogp/generateOgp.js';
 
+// シェア完了記録
+export const markAsShared = async (req: AuthRequest, res: Response): Promise<void> => {
+  const id = req.params['id'] as string;
+
+  try {
+    await docClient.send(
+      new UpdateCommand({
+        TableName: TABLES.DECLARATIONS,
+        Key: { declarationId: id },
+        UpdateExpression: 'SET sharedAt = :sharedAt',
+        ExpressionAttributeValues: {
+          ':sharedAt': new Date().toISOString(),
+        },
+      })
+    );
+
+    res.status(200).json({ message: 'シェア完了を記録しました' });
+  } catch (e: any) {
+    res.status(500).json({ message: e.message });
+  }
+};
+
 // 宣言一覧取得
 export const getDeclarations = async (req: AuthRequest, res: Response): Promise<void> => {
   try {

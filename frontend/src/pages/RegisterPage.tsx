@@ -46,71 +46,107 @@ const RegisterPage = () => {
 
   if (step === 'confirm') {
     return (
-      <div style={{ maxWidth: '400px', margin: '100px auto', padding: '24px' }}>
-        <h1>メール確認</h1>
-        <p>{email}に確認コードを送信しました。</p>
-        <form onSubmit={handleConfirm}>
-          <div style={{ marginBottom: '16px' }}>
-            <label>確認コード</label>
-            <input
-              type="text"
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              style={{ display: 'block', width: '100%', padding: '8px', marginTop: '4px' }}
-              required
-            />
+      <div className="min-h-screen bg-gray-950 flex items-center justify-center px-4">
+        <div className="w-full max-w-md">
+          <div className="text-center mb-8">
+            <h1 className="text-4xl font-bold text-white mb-2">メール確認</h1>
+            <p className="text-gray-400">{email} に確認コードを送信しました</p>
           </div>
-          {error && <p style={{ color: 'red' }}>{error}</p>}
-          <button type="submit" disabled={loading} style={{ width: '100%', padding: '12px' }}>
-            {loading ? '確認中...' : '確認する'}
-          </button>
-        </form>
+          <div className="bg-gray-900 rounded-2xl p-8 border border-gray-800">
+            <form onSubmit={handleConfirm} className="space-y-4">
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">確認コード</label>
+                <input
+                  type="text"
+                  value={code}
+                  onChange={(e) => setCode(e.target.value)}
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 text-center text-2xl tracking-widest"
+                  placeholder="000000"
+                  required
+                />
+              </div>
+              {error && (
+                <div className="bg-red-900/30 border border-red-800 rounded-lg px-4 py-3">
+                  <p className="text-red-400 text-sm">{error}</p>
+                </div>
+              )}
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-white text-gray-950 font-semibold py-3 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? '確認中...' : '確認する'}
+              </button>
+            </form>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div style={{ maxWidth: '400px', margin: '100px auto', padding: '24px' }}>
-      <h1>新規登録</h1>
-      <form onSubmit={handleRegister}>
-        <div style={{ marginBottom: '16px' }}>
-          <label>表示名</label>
-          <input
-            type="text"
-            value={displayName}
-            onChange={(e) => setDisplayName(e.target.value)}
-            style={{ display: 'block', width: '100%', padding: '8px', marginTop: '4px' }}
-            required
-          />
+    <div className="min-h-screen bg-gray-950 flex items-center justify-center px-4">
+      <div className="w-full max-w-md">
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold text-white mb-2">新規登録</h1>
+          <p className="text-gray-400">アカウントを作成して宣言を始めよう</p>
         </div>
-        <div style={{ marginBottom: '16px' }}>
-          <label>メールアドレス</label>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            style={{ display: 'block', width: '100%', padding: '8px', marginTop: '4px' }}
-            required
-          />
+        <div className="bg-gray-900 rounded-2xl p-8 border border-gray-800">
+          <form onSubmit={handleRegister} className="space-y-4">
+            <div>
+              <label className="block text-sm text-gray-400 mb-1">表示名</label>
+              <input
+                type="text"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
+                placeholder="山田太郎"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-400 mb-1">メールアドレス</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
+                placeholder="example@email.com"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-400 mb-1">パスワード（8文字以上・大文字・数字を含む）</label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
+                placeholder="••••••••"
+                required
+              />
+            </div>
+            {error && (
+              <div className="bg-red-900/30 border border-red-800 rounded-lg px-4 py-3">
+                <p className="text-red-400 text-sm">{error}</p>
+              </div>
+            )}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-white text-gray-950 font-semibold py-3 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? '登録中...' : '登録する'}
+            </button>
+          </form>
         </div>
-        <div style={{ marginBottom: '16px' }}>
-          <label>パスワード（8文字以上・大文字・数字を含む）</label>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            style={{ display: 'block', width: '100%', padding: '8px', marginTop: '4px' }}
-            required
-          />
-        </div>
-        {error && <p style={{ color: 'red' }}>{error}</p>}
-        <button type="submit" disabled={loading} style={{ width: '100%', padding: '12px' }}>
-          {loading ? '登録中...' : '登録する'}
-        </button>
-      </form>
-      <p style={{ marginTop: '16px' }}>
-        すでにアカウントをお持ちの方は<Link to="/login">ログイン</Link>
-      </p>
+        <p className="text-center text-gray-500 mt-6 text-sm">
+          すでにアカウントをお持ちの方は{' '}
+          <Link to="/login" className="text-blue-400 hover:text-blue-300">
+            ログイン
+          </Link>
+        </p>
+      </div>
     </div>
   );
 };
