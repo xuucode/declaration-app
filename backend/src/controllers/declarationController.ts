@@ -6,28 +6,6 @@ import { v4 as uuidv4 } from 'uuid';
 import { uploadOgpImage } from '../ogp/uploadOgp.js';
 import { OgpType } from '../ogp/generateOgp.js';
 
-// シェア完了記録
-export const markAsShared = async (req: AuthRequest, res: Response): Promise<void> => {
-  const id = req.params['id'] as string;
-
-  try {
-    await docClient.send(
-      new UpdateCommand({
-        TableName: TABLES.DECLARATIONS,
-        Key: { declarationId: id },
-        UpdateExpression: 'SET sharedAt = :sharedAt',
-        ExpressionAttributeValues: {
-          ':sharedAt': new Date().toISOString(),
-        },
-      })
-    );
-
-    res.status(200).json({ message: 'シェア完了を記録しました' });
-  } catch (e: any) {
-    res.status(500).json({ message: e.message });
-  }
-};
-
 // 宣言一覧取得
 export const getDeclarations = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
@@ -59,6 +37,37 @@ export const createDeclaration = async (req: AuthRequest, res: Response): Promis
   }
 
   try {
+    // 無料プランの制約チェック
+    const userResult = await docClient.send(
+      new GetCommand({
+        TableName: TABLES.USERS,
+        Key: { userId: req.userId },
+      })
+    );
+
+    const user = userResult.Item;
+    const isPremium = user?.subscriptionStatus === 'active';
+
+    if (!isPremium) {
+      const today = new Date().toISOString().slice(0, 10);
+      const todayDeclarations = await docClient.send(
+        new QueryCommand({
+          TableName: TABLES.DECLARATIONS,
+          IndexName: 'userId-createdAt-index',
+          KeyConditionExpression: 'userId = :userId AND begins_with(createdAt, :today)',
+          ExpressionAttributeValues: {
+            ':userId': req.userId,
+            ':today': today,
+          },
+        })
+      );
+
+      if ((todayDeclarations.Items?.length ?? 0) >= 3) {
+        res.status(403).json({ message: '無料プランは1日3回までです。プレミアムにアップグレードしてください。' });
+        return;
+      }
+    }
+
     const declarationId = uuidv4();
     const createdAt = new Date().toISOString();
 
@@ -192,7 +201,7 @@ export const updateDeclarationStatus = async (req: AuthRequest, res: Response): 
 
     uploadOgpImage({
       declarationId: id,
-      type: status as 'done' | 'failed',
+      type: status as OgpType,
       title: '',
       displayName,
       streakCount: newStreakCount,
@@ -211,6 +220,28 @@ export const updateDeclarationStatus = async (req: AuthRequest, res: Response): 
     const requiresShare = status === 'failed';
 
     res.status(200).json({ message: '更新しました', requiresShare });
+  } catch (e: any) {
+    res.status(500).json({ message: e.message });
+  }
+};
+
+// シェア完了記録
+export const markAsShared = async (req: AuthRequest, res: Response): Promise<void> => {
+  const id = req.params['id'] as string;
+
+  try {
+    await docClient.send(
+      new UpdateCommand({
+        TableName: TABLES.DECLARATIONS,
+        Key: { declarationId: id },
+        UpdateExpression: 'SET sharedAt = :sharedAt',
+        ExpressionAttributeValues: {
+          ':sharedAt': new Date().toISOString(),
+        },
+      })
+    );
+
+    res.status(200).json({ message: 'シェア完了を記録しました' });
   } catch (e: any) {
     res.status(500).json({ message: e.message });
   }
