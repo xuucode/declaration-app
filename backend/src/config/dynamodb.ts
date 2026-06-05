@@ -10,4 +10,6 @@ export const docClient = DynamoDBDocumentClient.from(client);
 export const TABLES = {
   USERS: 'declaration-app-users',
   DECLARATIONS: 'declaration-app-declarations',
+  DAILY_LOGS: 'declaration-app-daily-logs',
+  EXPENSE_LOGS: 'declaration-app-expense-logs',
 };

@@ -62,6 +62,40 @@ export class InfraStack extends cdk.Stack {
       sortKey: { name: 'createdAt', type: dynamodb.AttributeType.STRING },
     });
 
+    // DailyLogテーブル（習慣モード用）
+const dailyLogTable = new dynamodb.Table(this, 'DailyLogTable', {
+  tableName: 'declaration-app-daily-logs',
+  partitionKey: { name: 'habitId', type: dynamodb.AttributeType.STRING },
+  sortKey: { name: 'date', type: dynamodb.AttributeType.STRING },
+  billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+  removalPolicy: cdk.RemovalPolicy.DESTROY,
+});
+
+// userIdのGSI
+dailyLogTable.addGlobalSecondaryIndex({
+  indexName: 'userId-date-index',
+  partitionKey: { name: 'userId', type: dynamodb.AttributeType.STRING },
+  sortKey: { name: 'date', type: dynamodb.AttributeType.STRING },
+});
+
+// ExpenseLogテーブル（支出モード用）
+const expenseLogTable = new dynamodb.Table(this, 'ExpenseLogTable', {
+  tableName: 'declaration-app-expense-logs',
+  partitionKey: { name: 'expenseId', type: dynamodb.AttributeType.STRING },
+  billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+  removalPolicy: cdk.RemovalPolicy.DESTROY,
+});
+
+// declarationIdのGSI
+expenseLogTable.addGlobalSecondaryIndex({
+  indexName: 'declarationId-date-index',
+  partitionKey: { name: 'declarationId', type: dynamodb.AttributeType.STRING },
+  sortKey: { name: 'date', type: dynamodb.AttributeType.STRING },
+});
+
+new cdk.CfnOutput(this, 'DailyLogTableName', { value: dailyLogTable.tableName });
+new cdk.CfnOutput(this, 'ExpenseLogTableName', { value: expenseLogTable.tableName });
+
     // OGP画像用S3バケット
 const ogpBucket = new s3.Bucket(this, 'OgpBucket', {
   bucketName: 'declaration-app-ogp-images',

@@ -14,8 +14,11 @@ export const getDeclarations = async (req: AuthRequest, res: Response): Promise<
         TableName: TABLES.DECLARATIONS,
         IndexName: 'userId-createdAt-index',
         KeyConditionExpression: 'userId = :userId',
+        FilterExpression: '#type = :type OR attribute_not_exists(#type)',
+        ExpressionAttributeNames: { '#type': 'type' },
         ExpressionAttributeValues: {
           ':userId': req.userId,
+          ':type': 'task',
         },
         ScanIndexForward: false,
       })
@@ -29,7 +32,7 @@ export const getDeclarations = async (req: AuthRequest, res: Response): Promise<
 
 // 宣言作成
 export const createDeclaration = async (req: AuthRequest, res: Response): Promise<void> => {
-  const { title, description, deadline } = req.body;
+  const { title, description, deadline, type } = req.body;
 
   if (!title || !deadline) {
     res.status(400).json({ message: '必須項目が不足しています' });
@@ -72,15 +75,16 @@ export const createDeclaration = async (req: AuthRequest, res: Response): Promis
     const createdAt = new Date().toISOString();
 
     const item = {
-      declarationId,
-      userId: req.userId,
-      title,
-      description: description ?? '',
-      deadline,
-      status: 'pending',
-      ogpImageUrl: '',
-      createdAt,
-      reportedAt: '',
+    declarationId,
+    userId: req.userId,
+    type: type ?? 'task',
+    title,
+    description: description ?? '',
+    deadline,
+    status: 'pending',
+    ogpImageUrl: '',
+    createdAt,
+    reportedAt: '',
     };
 
     await docClient.send(
@@ -163,31 +167,51 @@ export const updateDeclarationStatus = async (req: AuthRequest, res: Response): 
         },
       })
     );
-
     // streakCountの更新
     if (status === 'done') {
-      await docClient.send(
-        new UpdateCommand({
-          TableName: TABLES.USERS,
-          Key: { userId: req.userId },
-          UpdateExpression: 'ADD streakCount :inc',
-          ExpressionAttributeValues: {
-            ':inc': 1,
-          },
-        })
-      );
-    } else {
-      await docClient.send(
-        new UpdateCommand({
-          TableName: TABLES.USERS,
-          Key: { userId: req.userId },
-          UpdateExpression: 'SET streakCount = :zero',
-          ExpressionAttributeValues: {
-            ':zero': 0,
-          },
-        })
-      );
-    }
+  // その日の全タスクが達成済みかチェック
+    const today = new Date().toISOString().slice(0, 10);
+    const todayDeclarations = await docClient.send(
+    new QueryCommand({
+      TableName: TABLES.DECLARATIONS,
+      IndexName: 'userId-createdAt-index',
+      KeyConditionExpression: 'userId = :userId AND begins_with(createdAt, :today)',
+      ExpressionAttributeValues: {
+        ':userId': req.userId,
+        ':today': today,
+      },
+    })
+  );
+
+    const todayItems = todayDeclarations.Items ?? [];
+    const allDone = todayItems.every(
+    (item) => item.declarationId === id || item.status === 'done'
+  );
+
+  if (allDone && todayItems.length > 0) {
+    await docClient.send(
+      new UpdateCommand({
+        TableName: TABLES.USERS,
+        Key: { userId: req.userId },
+        UpdateExpression: 'ADD streakCount :inc',
+        ExpressionAttributeValues: {
+          ':inc': 1,
+        },
+      })
+    );
+  }
+} else {
+  await docClient.send(
+    new UpdateCommand({
+      TableName: TABLES.USERS,
+      Key: { userId: req.userId },
+      UpdateExpression: 'SET streakCount = :zero',
+      ExpressionAttributeValues: {
+        ':zero': 0,
+      },
+    })
+  );
+}
 
     // OGP画像生成（非同期）
     const userResult = await docClient.send(

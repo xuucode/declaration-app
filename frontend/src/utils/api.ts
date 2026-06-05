@@ -13,4 +13,9 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+export const createCheckoutSession = async () => {
+  const res = await api.post('/subscriptions/checkout');
+  return res.data.url as string;
+};
+
 export default api;

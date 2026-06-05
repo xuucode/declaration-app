@@ -40,18 +40,22 @@ const DeclarationCard = ({ declaration, onUpdate }: DeclarationCardProps) => {
     setLoading(false);
   }
 };
+
+
   const statusConfig = {
     pending: { label: '⏳ 進行中', className: 'bg-blue-900/30 text-blue-400 border-blue-800' },
     done: { label: '✅ 達成', className: 'bg-green-900/30 text-green-400 border-green-800' },
     failed: { label: '❌ 未達成', className: 'bg-red-900/30 text-red-400 border-red-800' },
   };
 
+  const config = statusConfig[declaration.status] ?? statusConfig['pending'];
+
   return (
     <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 mb-4">
       <div className="flex justify-between items-start mb-3">
         <h3 className="text-white font-semibold text-lg flex-1 mr-4">{declaration.title}</h3>
-        <span className={`text-xs px-3 py-1 rounded-full border whitespace-nowrap ${statusConfig[declaration.status].className}`}>
-          {statusConfig[declaration.status].label}
+        <span className={`text-xs px-3 py-1 rounded-full border whitespace-nowrap ${config.className}`}>
+          {config.label}
         </span>
       </div>
 

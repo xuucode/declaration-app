@@ -8,6 +8,9 @@ interface User {
   displayName: string;
   streakCount: number;
   createdAt: string;
+  subscriptionStatus?: string;
+  stripeCustomerId?: string;
+  subscriptionId?: string;
 }
 
 export const useAuth = () => {
