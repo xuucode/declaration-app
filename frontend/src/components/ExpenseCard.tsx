@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import api from '../utils/api.js';
+import { createCheckoutSession } from '../utils/api.js';
 import ShareButton from './ShareButton.js';
 import { useLanguage } from '../i18n.js';
 
@@ -15,6 +16,7 @@ interface Expense {
   status: string;
   createdAt: string;
   sharedAt?: string;
+  isLocked?: boolean;
 }
 
 interface ExpenseCardProps {
@@ -40,6 +42,15 @@ const ExpenseCard = ({ expense, onUpdate }: ExpenseCardProps) => {
 
   const today = new Date().toISOString().slice(0, 10);
   const requiresShare = isOver && expense.periodEnd < today && !expense.sharedAt;
+
+  const handleUpgrade = async () => {
+    try {
+      const url = await createCheckoutSession();
+      window.location.href = url;
+    } catch {
+      setError(t('checkoutFailed'));
+    }
+  };
 
   const handleAddLog = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -105,10 +116,15 @@ const ExpenseCard = ({ expense, onUpdate }: ExpenseCardProps) => {
   };
 
   return (
-    <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 mb-4">
+    <div className={`bg-gray-900 border rounded-xl p-5 mb-4 ${expense.isLocked ? 'border-yellow-700/60' : 'border-gray-800'}`}>
       <div className="flex justify-between items-start mb-3">
         <h3 className="text-white font-semibold text-lg flex-1 mr-4">{expense.title}</h3>
         <div className="flex items-center gap-2">
+          {expense.isLocked && (
+            <span className="bg-yellow-900/30 text-yellow-300 border border-yellow-700 text-xs px-3 py-1 rounded-full whitespace-nowrap">
+              {t('premiumLockedBadge')}
+            </span>
+          )}
           <span className={`text-xs px-3 py-1 rounded-full border whitespace-nowrap ${
             isOver
               ? 'bg-red-900/30 text-red-400 border-red-800'
@@ -118,6 +134,7 @@ const ExpenseCard = ({ expense, onUpdate }: ExpenseCardProps) => {
           </span>
           <button
             onClick={() => setShowEdit(!showEdit)}
+            disabled={expense.isLocked}
             className="text-gray-500 hover:text-gray-300 text-xs px-2 py-1 rounded transition-colors"
           >
             {t('edit')}
@@ -135,8 +152,22 @@ const ExpenseCard = ({ expense, onUpdate }: ExpenseCardProps) => {
         <p className="text-gray-400 text-sm mb-3">{expense.description}</p>
       )}
 
+      {expense.isLocked && (
+        <div className="bg-yellow-900/20 border border-yellow-800 rounded-lg p-4 mb-4">
+          <p className="text-yellow-300 text-sm font-semibold mb-1">{t('premiumLockedTitle')}</p>
+          <p className="text-gray-400 text-sm mb-3">{t('premiumLockedExpenseBody')}</p>
+          <button
+            type="button"
+            onClick={handleUpgrade}
+            className="w-full py-2 bg-yellow-500 hover:bg-yellow-400 text-gray-950 rounded-lg text-sm font-semibold transition-colors"
+          >
+            {t('upgradePremium')}
+          </button>
+        </div>
+      )}
+
       {/* 編集フォーム */}
-      {showEdit && (
+      {showEdit && !expense.isLocked && (
         <form onSubmit={handleUpdate} className="space-y-3 mb-4">
           <div>
             <label className="block text-sm text-gray-400 mb-1">{t('categoryName')}</label>
@@ -187,7 +218,7 @@ const ExpenseCard = ({ expense, onUpdate }: ExpenseCardProps) => {
         </form>
       )}
 
-      {!showEdit && (
+      {!showEdit && !expense.isLocked && (
         <>
           <p className="text-gray-500 text-xs mb-3">
             {t('period')}：{expense.periodStart} 〜 {expense.periodEnd}

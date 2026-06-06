@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import api from '../utils/api.js';
+import { createCheckoutSession } from '../utils/api.js';
 import ShareButton from './ShareButton.js';
 import { useLanguage } from '../i18n.js';
 
@@ -13,6 +14,7 @@ interface Declaration {
   reportedAt: string;
   ogpImageUrl: string;
   sharedAt: string;
+  isLocked?: boolean;
 }
 
 interface DeclarationCardProps {
@@ -52,12 +54,21 @@ const DeclarationCard = ({ declaration, onUpdate }: DeclarationCardProps) => {
 
   const config = statusConfig[declaration.status] ?? statusConfig['pending'];
 
+  const handleUpgrade = async () => {
+    try {
+      const url = await createCheckoutSession();
+      window.location.href = url;
+    } catch {
+      setError(t('checkoutFailed'));
+    }
+  };
+
   return (
-    <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 mb-4">
+    <div className={`bg-gray-900 border rounded-xl p-5 mb-4 ${declaration.isLocked ? 'border-yellow-700/60' : 'border-gray-800'}`}>
       <div className="flex justify-between items-start mb-3">
         <h3 className="text-white font-semibold text-lg flex-1 mr-4">{declaration.title}</h3>
-        <span className={`text-xs px-3 py-1 rounded-full border whitespace-nowrap ${config.className}`}>
-          {config.label}
+        <span className={`text-xs px-3 py-1 rounded-full border whitespace-nowrap ${declaration.isLocked ? 'bg-yellow-900/30 text-yellow-300 border-yellow-700' : config.className}`}>
+          {declaration.isLocked ? t('premiumLockedBadge') : config.label}
         </span>
       </div>
 
@@ -69,8 +80,22 @@ const DeclarationCard = ({ declaration, onUpdate }: DeclarationCardProps) => {
         {t('deadline')}：{new Date(declaration.deadline).toLocaleString(locale)}
       </p>
 
+      {declaration.isLocked && (
+        <div className="bg-yellow-900/20 border border-yellow-800 rounded-lg p-4">
+          <p className="text-yellow-300 text-sm font-semibold mb-1">{t('premiumLockedTitle')}</p>
+          <p className="text-gray-400 text-sm mb-3">{t('premiumLockedTaskBody')}</p>
+          <button
+            type="button"
+            onClick={handleUpgrade}
+            className="w-full py-2 bg-yellow-500 hover:bg-yellow-400 text-gray-950 rounded-lg text-sm font-semibold transition-colors"
+          >
+            {t('upgradePremium')}
+          </button>
+        </div>
+      )}
+
       {/* 未達成シェア必須 */}
-      {requiresShare && (
+      {requiresShare && !declaration.isLocked && (
         <div className="bg-red-900/20 border border-red-800 rounded-lg p-4 mb-4">
           <p className="text-red-400 text-sm font-semibold mb-3">
             {t('shareFailedTaskRequired')}
@@ -88,7 +113,7 @@ const DeclarationCard = ({ declaration, onUpdate }: DeclarationCardProps) => {
       )}
 
       {/* 達成/未達成ボタン */}
-      {declaration.status === 'pending' && !requiresShare && (
+      {declaration.status === 'pending' && !requiresShare && !declaration.isLocked && (
   <div className="flex gap-3 mt-2">
     {!isPastDeadline && (
       <button
@@ -112,7 +137,7 @@ const DeclarationCard = ({ declaration, onUpdate }: DeclarationCardProps) => {
 )}
 
       {/* 達成時の任意シェア */}
-      {declaration.status === 'done' && !declaration.reportedAt && (
+      {declaration.status === 'done' && !declaration.reportedAt && !declaration.isLocked && (
         <div className="mt-3">
           <p className="text-gray-500 text-xs mb-2">
             {t('shareTip')}

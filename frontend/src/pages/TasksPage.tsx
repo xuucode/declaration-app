@@ -18,6 +18,7 @@ interface Declaration {
   reportedAt: string;
   ogpImageUrl: string;
   sharedAt: string;
+  isLocked?: boolean;
 }
 
 const TasksPage = () => {
@@ -57,7 +58,7 @@ const TasksPage = () => {
   }, [authLoading, user, navigate, fetchDeclarations]);
 
   const hasUnreportedFailed = declarations.some(
-    (d) => d.status === 'failed' && !d.sharedAt
+    (d) => d.status === 'failed' && !d.sharedAt && !d.isLocked
   );
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -274,11 +275,11 @@ const TasksPage = () => {
         )}
 
         {/* 未共有の未達成タスク */}
-        {declarations.filter((d) => d.status === 'failed' && !d.sharedAt).length > 0 && (
+        {declarations.filter((d) => d.status === 'failed' && !d.sharedAt && !d.isLocked).length > 0 && (
       <div className="mb-6">
     <h2 className="text-white font-semibold text-lg mb-4">{t('shareRequiredTasks')}</h2>
        {declarations
-      .filter((d) => d.status === 'failed' && !d.sharedAt)
+      .filter((d) => d.status === 'failed' && !d.sharedAt && !d.isLocked)
       .map((d) => (
         <DeclarationCard key={d.declarationId} declaration={d} onUpdate={fetchDeclarations} />
       ))}

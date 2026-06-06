@@ -56,6 +56,9 @@ const PrivacyPage = () => {
           <Link to="/terms" className="hover:text-gray-300 transition-colors">
             {t('terms')}
           </Link>
+          <Link to="/commercial-transaction" className="hover:text-gray-300 transition-colors">
+            {t('commercialTransaction')}
+          </Link>
           <Link to={user ? '/mypage' : '/login'} className="hover:text-gray-300 transition-colors">
             {t('backHome')}
           </Link>

@@ -16,6 +16,7 @@ interface Declaration {
   reportedAt: string;
   ogpImageUrl: string;
   sharedAt: string;
+  isLocked?: boolean;
 }
 
 const TaskHistoryPage = () => {

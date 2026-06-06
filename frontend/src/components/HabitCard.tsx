@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../utils/api.js';
+import { createCheckoutSession } from '../utils/api.js';
 import ShareButton from './ShareButton.js';
 import { useLanguage } from '../i18n.js';
 
@@ -12,6 +13,7 @@ interface Habit {
   status: string;
   streakCount: number;
   createdAt: string;
+  isLocked?: boolean;
 }
 
 interface HabitCardProps {
@@ -33,6 +35,11 @@ const HabitCard = ({ habit, onUpdate }: HabitCardProps) => {
   const [editLimitValue, setEditLimitValue] = useState(habit.limitValue?.toString() ?? '');
 
   useEffect(() => {
+    if (habit.isLocked) {
+      setCheckingLog(false);
+      return;
+    }
+
     const checkTodayLog = async () => {
       try {
         const res = await api.get(`/habits/${habit.declarationId}/logs`);
@@ -51,7 +58,16 @@ const HabitCard = ({ habit, onUpdate }: HabitCardProps) => {
       }
     };
     checkTodayLog();
-  }, [habit.declarationId]);
+  }, [habit.declarationId, habit.isLocked]);
+
+  const handleUpgrade = async () => {
+    try {
+      const url = await createCheckoutSession();
+      window.location.href = url;
+    } catch {
+      setError(t('checkoutFailed'));
+    }
+  };
 
   const handleLog = async (result: 'achieved' | 'failed') => {
     if (habit.limitType === 'count') {
@@ -156,15 +172,21 @@ const HabitCard = ({ habit, onUpdate }: HabitCardProps) => {
   }
 
   return (
-    <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 mb-4">
+    <div className={`bg-gray-900 border rounded-xl p-5 mb-4 ${habit.isLocked ? 'border-yellow-700/60' : 'border-gray-800'}`}>
       <div className="flex justify-between items-start mb-3">
         <h3 className="text-white font-semibold text-lg flex-1 mr-4">{habit.title}</h3>
         <div className="flex items-center gap-2">
+          {habit.isLocked && (
+            <span className="bg-yellow-900/30 text-yellow-300 border border-yellow-700 text-xs px-3 py-1 rounded-full whitespace-nowrap">
+              {t('premiumLockedBadge')}
+            </span>
+          )}
           <span className="text-orange-400 font-bold text-sm whitespace-nowrap">
             🔥 {habit.streakCount}
           </span>
           <button
             onClick={() => setShowEdit(!showEdit)}
+            disabled={habit.isLocked}
             className="text-gray-500 hover:text-gray-300 text-xs px-2 py-1 rounded transition-colors"
           >
             {t('edit')}
@@ -188,8 +210,22 @@ const HabitCard = ({ habit, onUpdate }: HabitCardProps) => {
         </p>
       )}
 
+      {habit.isLocked && (
+        <div className="bg-yellow-900/20 border border-yellow-800 rounded-lg p-4">
+          <p className="text-yellow-300 text-sm font-semibold mb-1">{t('premiumLockedTitle')}</p>
+          <p className="text-gray-400 text-sm mb-3">{t('premiumLockedHabitBody')}</p>
+          <button
+            type="button"
+            onClick={handleUpgrade}
+            className="w-full py-2 bg-yellow-500 hover:bg-yellow-400 text-gray-950 rounded-lg text-sm font-semibold transition-colors"
+          >
+            {t('upgradePremium')}
+          </button>
+        </div>
+      )}
+
       {/* 編集フォーム */}
-      {showEdit && (
+      {showEdit && !habit.isLocked && (
         <form onSubmit={handleUpdate} className="space-y-3 mb-4">
           <div>
             <label className="block text-sm text-gray-400 mb-1">{t('habitName')}</label>
@@ -242,7 +278,7 @@ const HabitCard = ({ habit, onUpdate }: HabitCardProps) => {
         </form>
       )}
 
-      {requiresShare ? (
+      {requiresShare && !habit.isLocked ? (
         <div className="bg-red-900/20 border border-red-800 rounded-lg p-4">
           <p className="text-red-400 text-sm font-semibold mb-3">
             {t('shareFailedHabit')}
@@ -263,19 +299,19 @@ const HabitCard = ({ habit, onUpdate }: HabitCardProps) => {
             }}
           />
         </div>
-      ) : logResult === 'achieved' ? (
+      ) : logResult === 'achieved' && !habit.isLocked ? (
         <div className="bg-green-900/20 border border-green-800 rounded-lg px-4 py-3">
           <p className="text-green-400 text-sm font-semibold">
             {t('achievedHabitTodayPrefix')}{habit.title}{t('achievedHabitTodaySuffix')}
           </p>
         </div>
-      ) : logResult === 'failed' ? (
+      ) : logResult === 'failed' && !habit.isLocked ? (
         <div className="bg-red-900/20 border border-red-800 rounded-lg px-4 py-3">
           <p className="text-red-400 text-sm font-semibold">
             {t('failedHabitTodayPrefix')}{habit.title}{t('failedHabitTodaySuffix')}
           </p>
         </div>
-      ) : !showEdit && (
+      ) : !showEdit && !habit.isLocked && (
         <div className="space-y-3">
           {habit.limitType === 'count' && (
             <div>

@@ -157,7 +157,7 @@ const RegisterPage = () => {
             {t('login')}
           </Link>
         </p>
-        <p className="text-center text-gray-600 mt-4 text-xs flex justify-center gap-4">
+        <p className="text-center text-gray-600 mt-4 text-xs flex flex-wrap justify-center gap-4">
           <Link to="/contact" className="hover:text-gray-300 transition-colors">
             {t('contact')}
           </Link>
@@ -166,6 +166,9 @@ const RegisterPage = () => {
           </Link>
           <Link to="/privacy" className="hover:text-gray-300 transition-colors">
             {t('privacy')}
+          </Link>
+          <Link to="/commercial-transaction" className="hover:text-gray-300 transition-colors">
+            {t('commercialTransaction')}
           </Link>
         </p>
       </div>

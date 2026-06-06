@@ -3,6 +3,8 @@ import { PutCommand, GetCommand, UpdateCommand, QueryCommand, DeleteCommand } fr
 import { docClient, TABLES } from '../config/dynamodb.js';
 import { AuthRequest } from '../middleware/auth.js';
 import { v4 as uuidv4 } from 'uuid';
+import { hasPremiumAccess } from '../utils/subscription.js';
+import { FREE_LIMITS, isItemLockedForFreePlan, markLockedItems } from '../utils/premiumLimits.js';
 
 // 支出管理一覧取得
 export const getExpenses = async (req: AuthRequest, res: Response): Promise<void> => {
@@ -22,7 +24,21 @@ export const getExpenses = async (req: AuthRequest, res: Response): Promise<void
       })
     );
 
-    res.status(200).json(result.Items ?? []);
+    const userResult = await docClient.send(
+      new GetCommand({
+        TableName: TABLES.USERS,
+        Key: { userId: req.userId },
+      })
+    );
+    const isPremium = hasPremiumAccess(userResult.Item);
+    const items = markLockedItems(
+      result.Items ?? [],
+      FREE_LIMITS.activeExpenses,
+      (item) => item.status === 'active',
+      isPremium
+    );
+
+    res.status(200).json(items);
   } catch (e: any) {
     res.status(500).json({ message: e.message });
   }
@@ -30,10 +46,21 @@ export const getExpenses = async (req: AuthRequest, res: Response): Promise<void
 
 // 支出管理作成
 export const createExpense = async (req: AuthRequest, res: Response): Promise<void> => {
-  const { title, description, limitAmount, period } = req.body;
+  const { title, description, limitAmount, period, customEndDate } = req.body;
 
   if (!title || !limitAmount || !period) {
     res.status(400).json({ message: '必須項目が不足しています' });
+    return;
+  }
+
+  if (!['monthly', 'weekly', 'custom'].includes(period)) {
+    res.status(400).json({ message: 'periodはmonthly、weekly、customのいずれかである必要があります' });
+    return;
+  }
+
+  const numericLimitAmount = Number(limitAmount);
+  if (!Number.isFinite(numericLimitAmount) || numericLimitAmount < 1) {
+    res.status(400).json({ message: '上限金額は1円以上で入力してください' });
     return;
   }
 
@@ -46,7 +73,7 @@ export const createExpense = async (req: AuthRequest, res: Response): Promise<vo
       })
     );
 
-    const isPremium = userResult.Item?.subscriptionStatus === 'active';
+    const isPremium = hasPremiumAccess(userResult.Item);
 
     if (!isPremium) {
       const existingExpenses = await docClient.send(
@@ -89,9 +116,20 @@ export const createExpense = async (req: AuthRequest, res: Response): Promise<vo
       const sunday = new Date(monday);
       sunday.setDate(monday.getDate() + 6);
       periodEnd = sunday.toISOString().slice(0, 10);
-    } else {
+    } else if (period === 'monthly') {
       periodStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
       periodEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10);
+    } else {
+      const today = now.toISOString().slice(0, 10);
+      const endDate = new Date(`${customEndDate}T00:00:00.000Z`);
+
+      if (!customEndDate || Number.isNaN(endDate.getTime()) || customEndDate < today) {
+        res.status(400).json({ message: 'カスタム期間では今日以降の終了日を指定してください' });
+        return;
+      }
+
+      periodStart = today;
+      periodEnd = customEndDate;
     }
 
     const item = {
@@ -100,7 +138,7 @@ export const createExpense = async (req: AuthRequest, res: Response): Promise<vo
       type: 'expense',
       title,
       description: description ?? '',
-      limitAmount,
+      limitAmount: numericLimitAmount,
       period,
       periodStart,
       periodEnd,
@@ -133,6 +171,53 @@ export const addExpenseLog = async (req: AuthRequest, res: Response): Promise<vo
   }
 
   try {
+    const expenseResult = await docClient.send(
+      new GetCommand({
+        TableName: TABLES.DECLARATIONS,
+        Key: { declarationId: id },
+      })
+    );
+    const expense = expenseResult.Item;
+    if (!expense || expense.userId !== req.userId || expense.type !== 'expense') {
+      res.status(404).json({ message: '支出管理が見つかりません' });
+      return;
+    }
+
+    const userResult = await docClient.send(
+      new GetCommand({
+        TableName: TABLES.USERS,
+        Key: { userId: req.userId },
+      })
+    );
+    const expensesResult = await docClient.send(
+      new QueryCommand({
+        TableName: TABLES.DECLARATIONS,
+        IndexName: 'userId-createdAt-index',
+        KeyConditionExpression: 'userId = :userId',
+        FilterExpression: '#type = :type AND #status = :status',
+        ExpressionAttributeNames: {
+          '#type': 'type',
+          '#status': 'status',
+        },
+        ExpressionAttributeValues: {
+          ':userId': req.userId,
+          ':type': 'expense',
+          ':status': 'active',
+        },
+      })
+    );
+    const isLocked = isItemLockedForFreePlan(
+      expensesResult.Items ?? [],
+      id,
+      FREE_LIMITS.activeExpenses,
+      (item) => item.status === 'active',
+      hasPremiumAccess(userResult.Item)
+    );
+    if (isLocked) {
+      res.status(403).json({ message: 'この支出管理はPremiumで再開できます。' });
+      return;
+    }
+
     const expenseId = uuidv4();
     const today = new Date().toISOString().slice(0, 10);
 
@@ -191,6 +276,53 @@ export const deleteExpense = async (req: AuthRequest, res: Response): Promise<vo
   const id = req.params['id'] as string;
 
   try {
+    const expenseResult = await docClient.send(
+      new GetCommand({
+        TableName: TABLES.DECLARATIONS,
+        Key: { declarationId: id },
+      })
+    );
+    const expense = expenseResult.Item;
+    if (!expense || expense.userId !== req.userId || expense.type !== 'expense') {
+      res.status(404).json({ message: '支出管理が見つかりません' });
+      return;
+    }
+
+    const userResult = await docClient.send(
+      new GetCommand({
+        TableName: TABLES.USERS,
+        Key: { userId: req.userId },
+      })
+    );
+    const expensesResult = await docClient.send(
+      new QueryCommand({
+        TableName: TABLES.DECLARATIONS,
+        IndexName: 'userId-createdAt-index',
+        KeyConditionExpression: 'userId = :userId',
+        FilterExpression: '#type = :type AND #status = :status',
+        ExpressionAttributeNames: {
+          '#type': 'type',
+          '#status': 'status',
+        },
+        ExpressionAttributeValues: {
+          ':userId': req.userId,
+          ':type': 'expense',
+          ':status': 'active',
+        },
+      })
+    );
+    const isLocked = isItemLockedForFreePlan(
+      expensesResult.Items ?? [],
+      id,
+      FREE_LIMITS.activeExpenses,
+      (item) => item.status === 'active',
+      hasPremiumAccess(userResult.Item)
+    );
+    if (isLocked) {
+      res.status(403).json({ message: 'この支出管理はPremiumで再開できます。' });
+      return;
+    }
+
     await docClient.send(
       new DeleteCommand({
         TableName: TABLES.DECLARATIONS,

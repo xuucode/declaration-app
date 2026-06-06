@@ -3,7 +3,16 @@ import { PutCommand, GetCommand, UpdateCommand, QueryCommand, DeleteCommand } fr
 import { docClient, TABLES } from '../config/dynamodb.js';
 import { AuthRequest } from '../middleware/auth.js';
 import { v4 as uuidv4 } from 'uuid';
+import { hasPremiumAccess } from '../utils/subscription.js';
+import { FREE_LIMITS, isItemLockedForFreePlan, markLockedItems } from '../utils/premiumLimits.js';
 
+const toDateKey = (date: Date): string => date.toISOString().slice(0, 10);
+
+const getStartOfUtcDay = (date: Date): Date => {
+  const start = new Date(date);
+  start.setUTCHours(0, 0, 0, 0);
+  return start;
+};
 
 // 習慣一覧取得
 export const getHabits = async (req: AuthRequest, res: Response): Promise<void> => {
@@ -23,7 +32,21 @@ export const getHabits = async (req: AuthRequest, res: Response): Promise<void> 
       })
     );
 
-    res.status(200).json(result.Items ?? []);
+    const userResult = await docClient.send(
+      new GetCommand({
+        TableName: TABLES.USERS,
+        Key: { userId: req.userId },
+      })
+    );
+    const isPremium = hasPremiumAccess(userResult.Item);
+    const items = markLockedItems(
+      result.Items ?? [],
+      FREE_LIMITS.activeHabits,
+      (item) => item.status === 'active',
+      isPremium
+    );
+
+    res.status(200).json(items);
   } catch (e: any) {
     res.status(500).json({ message: e.message });
   }
@@ -60,7 +83,7 @@ export const createHabit = async (req: AuthRequest, res: Response): Promise<void
       })
     );
 
-    const isPremium = userResult.Item?.subscriptionStatus === 'active';
+    const isPremium = hasPremiumAccess(userResult.Item);
 
     if (!isPremium) {
       const existingHabits = await docClient.send(
@@ -137,6 +160,41 @@ export const logHabit = async (req: AuthRequest, res: Response): Promise<void> =
     const habit = habitResult.Item;
     if (!habit || habit.userId !== req.userId || habit.type !== 'habit') {
       res.status(404).json({ message: '習慣が見つかりません' });
+      return;
+    }
+
+    const userResult = await docClient.send(
+      new GetCommand({
+        TableName: TABLES.USERS,
+        Key: { userId: req.userId },
+      })
+    );
+    const habitsResult = await docClient.send(
+      new QueryCommand({
+        TableName: TABLES.DECLARATIONS,
+        IndexName: 'userId-createdAt-index',
+        KeyConditionExpression: 'userId = :userId',
+        FilterExpression: '#type = :type AND #status = :status',
+        ExpressionAttributeNames: {
+          '#type': 'type',
+          '#status': 'status',
+        },
+        ExpressionAttributeValues: {
+          ':userId': req.userId,
+          ':type': 'habit',
+          ':status': 'active',
+        },
+      })
+    );
+    const isLocked = isItemLockedForFreePlan(
+      habitsResult.Items ?? [],
+      id,
+      FREE_LIMITS.activeHabits,
+      (item) => item.status === 'active',
+      hasPremiumAccess(userResult.Item)
+    );
+    if (isLocked) {
+      res.status(403).json({ message: 'この習慣はPremiumで再開できます。' });
       return;
     }
 
@@ -308,6 +366,41 @@ export const updateHabit = async (req: AuthRequest, res: Response): Promise<void
       return;
     }
 
+    const userResult = await docClient.send(
+      new GetCommand({
+        TableName: TABLES.USERS,
+        Key: { userId: req.userId },
+      })
+    );
+    const habitsResult = await docClient.send(
+      new QueryCommand({
+        TableName: TABLES.DECLARATIONS,
+        IndexName: 'userId-createdAt-index',
+        KeyConditionExpression: 'userId = :userId',
+        FilterExpression: '#type = :type AND #status = :status',
+        ExpressionAttributeNames: {
+          '#type': 'type',
+          '#status': 'status',
+        },
+        ExpressionAttributeValues: {
+          ':userId': req.userId,
+          ':type': 'habit',
+          ':status': 'active',
+        },
+      })
+    );
+    const isLocked = isItemLockedForFreePlan(
+      habitsResult.Items ?? [],
+      id,
+      FREE_LIMITS.activeHabits,
+      (item) => item.status === 'active',
+      hasPremiumAccess(userResult.Item)
+    );
+    if (isLocked) {
+      res.status(403).json({ message: 'この習慣はPremiumで再開できます。' });
+      return;
+    }
+
     if (habit.limitType === 'count') {
       const numericLimit = Number(limitValue);
       if (!Number.isFinite(numericLimit) || numericLimit < 1) {
@@ -356,72 +449,84 @@ export const autoFailUnloggedHabits = async (req: AuthRequest, res: Response): P
       })
     );
 
-    const habits = habitsResult.Items ?? [];
+    const userResult = await docClient.send(
+      new GetCommand({
+        TableName: TABLES.USERS,
+        Key: { userId: req.userId },
+      })
+    );
+    const habits = markLockedItems(
+      habitsResult.Items ?? [],
+      FREE_LIMITS.activeHabits,
+      (item) => item.status === 'active',
+      hasPremiumAccess(userResult.Item)
+    ).filter((habit) => !habit.isLocked);
     const unloggedHabits = [];
 
+    const now = new Date();
+    const yesterday = new Date(now);
+    yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+    const yesterdayStart = getStartOfUtcDay(yesterday);
+    const dateStr = toDateKey(yesterdayStart);
+
     for (const habit of habits) {
-      const createdDate = new Date(habit.createdAt);
-      createdDate.setHours(0, 0, 0, 0);
+      const createdAt = new Date(habit.createdAt);
 
-      // 今日以外の直近7日間の未記録をチェック
-      for (let i = 1; i <= 7; i++) {
-        const date = new Date();
-        date.setDate(date.getDate() - i);
-        date.setHours(0, 0, 0, 0);
+      // 作成から24時間未満、または昨日の開始時点で存在していなかった習慣は対象外。
+      // 新規作成後にタブを移動して戻っただけで未記録扱いになることを防ぐ。
+      if (
+        Number.isNaN(createdAt.getTime()) ||
+        now.getTime() - createdAt.getTime() < 24 * 60 * 60 * 1000 ||
+        createdAt >= yesterdayStart
+      ) {
+        continue;
+      }
 
-        if (date < createdDate) {
-          continue;
-        }
+      // 昨日のログだけを確認する。過去分をまとめて作らないことで大量警告を避ける。
+      const logResult = await docClient.send(
+        new QueryCommand({
+          TableName: TABLES.DAILY_LOGS,
+          KeyConditionExpression: 'habitId = :habitId AND #date = :date',
+          ExpressionAttributeNames: { '#date': 'date' },
+          ExpressionAttributeValues: {
+            ':habitId': habit.declarationId,
+            ':date': dateStr,
+          },
+        })
+      );
 
-        const dateStr = date.toISOString().slice(0, 10);
-
-        // その日のログを確認
-        const logResult = await docClient.send(
-          new QueryCommand({
+      if ((logResult.Items?.length ?? 0) === 0) {
+        const logId = uuidv4();
+        await docClient.send(
+          new PutCommand({
             TableName: TABLES.DAILY_LOGS,
-            KeyConditionExpression: 'habitId = :habitId AND #date = :date',
-            ExpressionAttributeNames: { '#date': 'date' },
-            ExpressionAttributeValues: {
-              ':habitId': habit.declarationId,
-              ':date': dateStr,
+            Item: {
+              habitId: habit.declarationId,
+              date: dateStr,
+              logId,
+              userId: req.userId,
+              result: 'failed',
+              value: null,
+              autoFailed: true,
+              createdAt: now.toISOString(),
             },
           })
         );
 
-        // ログがない場合は自動で未達成を記録
-        if ((logResult.Items?.length ?? 0) === 0) {
-          const logId = uuidv4();
-          await docClient.send(
-            new PutCommand({
-              TableName: TABLES.DAILY_LOGS,
-              Item: {
-                habitId: habit.declarationId,
-                date: dateStr,
-                logId,
-                userId: req.userId,
-                result: 'failed',
-                value: null,
-                autoFailed: true,
-                createdAt: new Date().toISOString(),
-              },
-            })
-          );
+        await docClient.send(
+          new UpdateCommand({
+            TableName: TABLES.DECLARATIONS,
+            Key: { declarationId: habit.declarationId },
+            UpdateExpression: 'SET streakCount = :zero',
+            ExpressionAttributeValues: { ':zero': 0 },
+          })
+        );
 
-          await docClient.send(
-            new UpdateCommand({
-              TableName: TABLES.DECLARATIONS,
-              Key: { declarationId: habit.declarationId },
-              UpdateExpression: 'SET streakCount = :zero',
-              ExpressionAttributeValues: { ':zero': 0 },
-            })
-          );
-
-          unloggedHabits.push({
-            declarationId: habit.declarationId,
-            title: habit.title,
-            date: dateStr,
-          });
-        }
+        unloggedHabits.push({
+          declarationId: habit.declarationId,
+          title: habit.title,
+          date: dateStr,
+        });
       }
     }
 

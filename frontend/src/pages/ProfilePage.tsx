@@ -27,6 +27,7 @@ const ProfilePage = () => {
   const [goalError, setGoalError] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [emailError, setEmailError] = useState('');
+  const cancelScheduled = user?.subscriptionCancelAtPeriodEnd ?? false;
 
   const [loading, setLoading] = useState(false);
 
@@ -138,11 +139,15 @@ const ProfilePage = () => {
         <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 mb-6">
           <h3 className="text-white font-semibold mb-3">{t('plan')}</h3>
           {user?.subscriptionStatus === 'active' ? (
-            <div className="flex items-center gap-3">
-              <span className="bg-yellow-500/20 text-yellow-400 border border-yellow-600 text-sm px-3 py-1 rounded-full font-semibold">
-                ⭐ Premium
-              </span>
-              <p className="text-gray-400 text-sm">{t('premiumActive')}</p>
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <span className="bg-yellow-500/20 text-yellow-400 border border-yellow-600 text-sm px-3 py-1 rounded-full font-semibold">
+                  ⭐ Premium
+                </span>
+                <p className="text-gray-400 text-sm">
+                  {cancelScheduled ? t('premiumCancelScheduled') : t('premiumActive')}
+                </p>
+              </div>
             </div>
           ) : (
             <div>
@@ -280,6 +285,24 @@ const ProfilePage = () => {
             </button>
           </form>
         </div>
+
+        {user?.subscriptionStatus === 'active' && (
+          <div className="bg-gray-900 border border-red-900/40 rounded-xl p-6 mb-6">
+            <h3 className="text-white font-semibold mb-2">{t('premiumCancelAreaTitle')}</h3>
+            <p className="text-gray-400 text-sm leading-relaxed mb-4">
+              {cancelScheduled ? t('premiumCancelScheduled') : t('premiumCancelAreaLead')}
+            </p>
+            {!cancelScheduled && (
+              <button
+                type="button"
+                onClick={() => navigate('/cancel-premium')}
+                className="w-full py-3 bg-red-900/30 border border-red-800 text-red-300 font-semibold rounded-xl hover:bg-red-900/50 transition-colors"
+              >
+                {t('cancelPremium')}
+              </button>
+            )}
+          </div>
+        )}
 
         {/* ログアウト */}
         <button

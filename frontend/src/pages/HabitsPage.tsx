@@ -16,6 +16,7 @@ interface Habit {
   status: string;
   streakCount: number;
   createdAt: string;
+  isLocked?: boolean;
 }
 
 const HabitsPage = () => {
@@ -38,34 +39,32 @@ const HabitsPage = () => {
     } catch {
       setError(t('habitFetchFailed'));
     }
-  }, []);
+  }, [t]);
 
   const [unloggedWarnings, setUnloggedWarnings] = useState<{declarationId: string, title: string, date: string}[]>([]);
 
-const checkAutoFail = useCallback(async () => {
-  try {
-    const res = await api.post('/habits/auto-fail', {});
-    if (res.data.unloggedHabits.length > 0) {
-      setUnloggedWarnings(res.data.unloggedHabits);
+  const checkAutoFail = useCallback(async () => {
+    try {
+      const res = await api.post('/habits/auto-fail', {});
+      setUnloggedWarnings(res.data.unloggedHabits ?? []);
+    } catch {
+      // エラー時は何もしない
     }
-  } catch {
-    // エラー時は何もしない
-  }
-}, []);
+  }, []);
 
   useEffect(() => {
-  if (authLoading) return;
-  if (!user) {
-    navigate('/login');
-    return;
-  }
-  const init = async () => {
-    await checkAutoFail();
-    await fetchHabits();
-    setLoading(false);
-  };
-  init();
-}, [authLoading, user, navigate, fetchHabits, checkAutoFail]);
+    if (authLoading) return;
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+    const init = async () => {
+      await checkAutoFail();
+      await fetchHabits();
+      setLoading(false);
+    };
+    init();
+  }, [authLoading, user, navigate, fetchHabits, checkAutoFail]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -102,27 +101,20 @@ const checkAutoFail = useCallback(async () => {
     <div className="min-h-screen bg-gray-950">
       <Navigation />
       <div className="max-w-2xl mx-auto px-4 py-8">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-white text-2xl font-bold">{t('habitManagement')}</h2>
-          {user?.subscriptionStatus === 'active' && (
-            <span className="bg-yellow-500/20 text-yellow-400 border border-yellow-600 text-xs px-3 py-1 rounded-full font-semibold">
-              ⭐ Premium
-            </span>
-          )}
-        </div>
+        <h2 className="text-white text-2xl font-bold mb-6">{t('habitManagement')}</h2>
 
-          {unloggedWarnings.length > 0 && (
-  <div className="bg-yellow-900/30 border border-yellow-800 rounded-xl p-4 mb-6">
-    <p className="text-yellow-400 font-semibold mb-2">{t('unloggedHabits')}</p>
-    <ul className="space-y-1">
-      {unloggedWarnings.map((w, i) => (
-        <li key={i} className="text-yellow-300 text-sm">
-          ・「{w.title}」{w.date} {t('unloggedHabitRecorded')}
-        </li>
-      ))}
-    </ul>
-  </div>
-  )}
+        {unloggedWarnings.length > 0 && (
+          <div className="bg-yellow-900/30 border border-yellow-800 rounded-xl p-4 mb-6">
+            <p className="text-yellow-400 font-semibold mb-2">{t('unloggedHabits')}</p>
+            <ul className="space-y-1">
+              {unloggedWarnings.map((w, i) => (
+                <li key={`${w.declarationId}-${w.date}-${i}`} className="text-yellow-300 text-sm">
+                  ・「{w.title}」{w.date} {t('unloggedHabitRecorded')}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         {!showForm && (
           <button

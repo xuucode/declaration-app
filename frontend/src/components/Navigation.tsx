@@ -21,9 +21,15 @@ const Navigation = () => {
   ];
 
   return (
-    <header className="border-b border-gray-800 px-4 py-3 bg-gray-950 sticky top-0 z-10">
+    <header className="app-header border-b border-gray-800 px-4 py-3 bg-gray-950 sticky top-0 z-10">
       <div className="max-w-2xl mx-auto flex justify-between items-start gap-4">
-        <img src={structHomeLogo} alt="Struct" className="h-24 w-auto max-w-[340px]" />
+        <button
+          onClick={() => navigate('/mypage')}
+          className="nav-brand"
+          aria-label="Struct home"
+        >
+          <img src={structHomeLogo} alt="Struct" className="h-24 w-auto max-w-[340px]" />
+        </button>
         <div className="flex items-center gap-3 pt-1">
           <div className="hidden sm:block">
             <LanguageToggle />
@@ -31,7 +37,9 @@ const Navigation = () => {
           {/* ハンバーガーメニュー */}
           <button
             onClick={() => setMenuOpen(!menuOpen)}
-            className="md:hidden text-gray-400 hover:text-white p-2"
+            className="nav-menu-button md:hidden text-gray-400 hover:text-white p-2"
+            aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+            aria-expanded={menuOpen}
           >
             <div className="w-5 h-0.5 bg-current mb-1"></div>
             <div className="w-5 h-0.5 bg-current mb-1"></div>
@@ -41,14 +49,14 @@ const Navigation = () => {
       </div>
 
       {/* デスクトップナビ */}
-      <nav className="max-w-2xl mx-auto mt-2 hidden md:grid grid-cols-5 gap-2">
+      <nav className="nav-rail max-w-2xl mx-auto mt-2 hidden md:grid grid-cols-5 gap-2">
         {navItems.map((item) => (
           <button
             key={item.path}
             onClick={() => navigate(item.path)}
-            className={`flex-1 px-3 py-2 rounded-lg text-sm font-semibold transition-colors
+            className={`nav-tab flex-1 px-3 py-2 rounded-lg text-sm font-semibold transition-colors
               ${location.pathname === item.path
-                ? 'bg-white text-gray-950'
+                ? 'nav-tab-active bg-white text-gray-950'
                 : 'text-gray-400 hover:text-white hover:bg-gray-800'
               }`}
           >
@@ -59,15 +67,15 @@ const Navigation = () => {
 
       {/* モバイルメニュー */}
       {menuOpen && (
-        <div className="md:hidden mt-3 border-t border-gray-800 pt-3">
+        <div className="mobile-nav-panel md:hidden mt-3 border-t border-gray-800 pt-3">
           <div className="max-w-2xl mx-auto space-y-1">
             {navItems.map((item) => (
               <button
                 key={item.path}
                 onClick={() => { navigate(item.path); setMenuOpen(false); }}
-                className={`w-full text-left px-4 py-3 rounded-lg text-sm font-semibold transition-colors
+                className={`nav-mobile-item w-full text-left px-4 py-3 rounded-lg text-sm font-semibold transition-colors
                   ${location.pathname === item.path
-                    ? 'bg-white text-gray-950'
+                    ? 'nav-tab-active bg-white text-gray-950'
                     : 'text-gray-400 hover:text-white hover:bg-gray-800'
                   }`}
               >

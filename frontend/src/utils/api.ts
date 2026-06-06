@@ -18,4 +18,8 @@ export const createCheckoutSession = async () => {
   return res.data.url as string;
 };
 
+export const confirmCheckoutSession = async (sessionId: string) => {
+  await api.post('/subscriptions/confirm', { sessionId });
+};
+
 export default api;

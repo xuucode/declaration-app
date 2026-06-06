@@ -3,20 +3,21 @@ import LanguageToggle from '../components/LanguageToggle.js';
 import { useAuth } from '../hooks/useAuth.js';
 import { useLanguage } from '../i18n.js';
 
-const termSections = [
-  ['termsIntroTitle', 'termsIntroBody'],
-  ['termsAccountTitle', 'termsAccountBody'],
-  ['termsServiceTitle', 'termsServiceBody'],
-  ['termsProhibitedTitle', 'termsProhibitedBody'],
-  ['termsPublicTitle', 'termsPublicBody'],
-  ['termsPaidTitle', 'termsPaidBody'],
-  ['termsAdsTitle', 'termsAdsBody'],
-  ['termsDisclaimerTitle', 'termsDisclaimerBody'],
-  ['termsChangesTitle', 'termsChangesBody'],
-  ['termsContactTitle', 'termsContactBody'],
+const commercialSections = [
+  ['commercialSellerTitle', 'commercialSellerBody'],
+  ['commercialOperatorTitle', 'commercialOperatorBody'],
+  ['commercialAddressTitle', 'commercialAddressBody'],
+  ['commercialPhoneTitle', 'commercialPhoneBody'],
+  ['commercialEmailTitle', 'commercialEmailBody'],
+  ['commercialPriceTitle', 'commercialPriceBody'],
+  ['commercialExtraFeesTitle', 'commercialExtraFeesBody'],
+  ['commercialPaymentTitle', 'commercialPaymentBody'],
+  ['commercialDeliveryTitle', 'commercialDeliveryBody'],
+  ['commercialCancelTitle', 'commercialCancelBody'],
+  ['commercialRefundTitle', 'commercialRefundBody'],
 ] as const;
 
-const TermsPage = () => {
+const CommercialTransactionPage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { t } = useLanguage();
@@ -34,29 +35,29 @@ const TermsPage = () => {
           >
             {t('backHome')}
           </button>
-          <h1 className="text-white text-3xl font-bold mb-2">{t('terms')}</h1>
-          <p className="text-gray-400 text-sm">{t('termsLead')}</p>
-          <p className="text-gray-500 text-xs mt-3">{t('termsUpdated')}</p>
+          <h1 className="text-white text-3xl font-bold mb-2">{t('commercialTransaction')}</h1>
+          <p className="text-gray-400 text-sm">{t('commercialTransactionLead')}</p>
+          <p className="text-gray-500 text-xs mt-3">{t('commercialTransactionUpdated')}</p>
         </div>
 
         <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 space-y-6">
-          {termSections.map(([titleKey, bodyKey]) => (
+          {commercialSections.map(([titleKey, bodyKey]) => (
             <section key={titleKey}>
               <h2 className="text-white font-semibold text-lg mb-2">{t(titleKey)}</h2>
-              <p className="text-gray-400 text-sm leading-7">{t(bodyKey)}</p>
+              <p className="text-gray-400 text-sm leading-7 whitespace-pre-line">{t(bodyKey)}</p>
             </section>
           ))}
         </div>
 
-        <div className="flex justify-center gap-4 mt-6 text-xs text-gray-600">
+        <div className="flex flex-wrap justify-center gap-4 mt-6 text-xs text-gray-600">
           <Link to="/contact" className="hover:text-gray-300 transition-colors">
             {t('contact')}
           </Link>
+          <Link to="/terms" className="hover:text-gray-300 transition-colors">
+            {t('terms')}
+          </Link>
           <Link to="/privacy" className="hover:text-gray-300 transition-colors">
             {t('privacy')}
-          </Link>
-          <Link to="/commercial-transaction" className="hover:text-gray-300 transition-colors">
-            {t('commercialTransaction')}
           </Link>
           <Link to={user ? '/mypage' : '/login'} className="hover:text-gray-300 transition-colors">
             {t('backHome')}
@@ -67,4 +68,4 @@ const TermsPage = () => {
   );
 };
 
-export default TermsPage;
+export default CommercialTransactionPage;

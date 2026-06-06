@@ -18,6 +18,7 @@ interface Expense {
   totalAmount: number;
   status: string;
   createdAt: string;
+  isLocked?: boolean;
 }
 
 const ExpensesPage = () => {
@@ -30,8 +31,10 @@ const ExpensesPage = () => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [limitAmount, setLimitAmount] = useState('');
-  const [period, setPeriod] = useState<'monthly' | 'weekly'>('monthly');
+  const [period, setPeriod] = useState<'monthly' | 'weekly' | 'custom'>('monthly');
+  const [customEndDate, setCustomEndDate] = useState('');
   const [error, setError] = useState('');
+  const today = new Date().toISOString().slice(0, 10);
 
   const fetchExpenses = useCallback(async () => {
     try {
@@ -60,16 +63,23 @@ const ExpensesPage = () => {
     setError('');
 
     try {
+      if (period === 'custom' && !customEndDate) {
+        setError(t('customEndDateRequired'));
+        return;
+      }
+
       await api.post('/expenses', {
         title,
         description,
         limitAmount: Number(limitAmount),
         period,
+        customEndDate: period === 'custom' ? customEndDate : undefined,
       });
       setTitle('');
       setDescription('');
       setLimitAmount('');
       setPeriod('monthly');
+      setCustomEndDate('');
       setShowForm(false);
       fetchExpenses();
     } catch (err) {
@@ -90,14 +100,7 @@ const ExpensesPage = () => {
     <div className="min-h-screen bg-gray-950">
       <Navigation />
       <div className="max-w-2xl mx-auto px-4 py-8">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-white text-2xl font-bold">{t('expenseManagement')}</h2>
-          {user?.subscriptionStatus === 'active' && (
-            <span className="bg-yellow-500/20 text-yellow-400 border border-yellow-600 text-xs px-3 py-1 rounded-full font-semibold">
-              ⭐ Premium
-            </span>
-          )}
-        </div>
+        <h2 className="text-white text-2xl font-bold mb-6">{t('expenseManagement')}</h2>
 
         {!showForm && (
           <button
@@ -141,7 +144,10 @@ const ExpensesPage = () => {
                 <div className="flex gap-3">
                   <button
                     type="button"
-                    onClick={() => setPeriod('monthly')}
+                    onClick={() => {
+                      setPeriod('monthly');
+                      setCustomEndDate('');
+                    }}
                     className={`flex-1 py-2 rounded-lg text-sm font-semibold border transition-colors ${
                       period === 'monthly'
                         ? 'bg-white text-gray-950 border-white'
@@ -152,7 +158,10 @@ const ExpensesPage = () => {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setPeriod('weekly')}
+                    onClick={() => {
+                      setPeriod('weekly');
+                      setCustomEndDate('');
+                    }}
                     className={`flex-1 py-2 rounded-lg text-sm font-semibold border transition-colors ${
                       period === 'weekly'
                         ? 'bg-white text-gray-950 border-white'
@@ -161,8 +170,33 @@ const ExpensesPage = () => {
                   >
                     {t('weekly')}
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => setPeriod('custom')}
+                    className={`flex-1 py-2 rounded-lg text-sm font-semibold border transition-colors ${
+                      period === 'custom'
+                        ? 'bg-white text-gray-950 border-white'
+                        : 'bg-gray-800 text-gray-400 border-gray-700'
+                    }`}
+                  >
+                    {t('customPeriod')}
+                  </button>
                 </div>
               </div>
+              {period === 'custom' && (
+                <div>
+                  <label className="block text-sm text-gray-400 mb-1">{t('customEndDate')}</label>
+                  <input
+                    type="date"
+                    value={customEndDate}
+                    onChange={(e) => setCustomEndDate(e.target.value)}
+                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500"
+                    min={today}
+                    required
+                  />
+                  <p className="text-gray-500 text-xs mt-1">{t('customPeriodHelp')}</p>
+                </div>
+              )}
               <div>
                 <label className="block text-sm text-gray-400 mb-1">{t('limitAmountYen')}</label>
                 <input

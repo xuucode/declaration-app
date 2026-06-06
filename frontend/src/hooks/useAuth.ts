@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import api from '../utils/api.js';
 import { clearTokens, isLoggedIn } from '../utils/auth.js';
 
@@ -11,6 +11,7 @@ interface User {
   subscriptionStatus?: string;
   stripeCustomerId?: string;
   subscriptionId?: string;
+  subscriptionCancelAtPeriodEnd?: boolean;
   goal?: string;
 }
 
@@ -18,25 +19,27 @@ export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchUser = async () => {
-      if (!isLoggedIn()) {
-        setLoading(false);
-        return;
-      }
+  const refreshUser = useCallback(async () => {
+    if (!isLoggedIn()) {
+      setUser(null);
+      setLoading(false);
+      return;
+    }
 
-      try {
-        const res = await api.get('/users/me');
-        setUser(res.data);
-      } catch {
-        clearTokens();
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchUser();
+    try {
+      const res = await api.get('/users/me');
+      setUser(res.data);
+    } catch {
+      clearTokens();
+      setUser(null);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    refreshUser();
+  }, [refreshUser]);
 
   const logout = () => {
     clearTokens();
@@ -44,5 +47,5 @@ export const useAuth = () => {
     window.location.href = '/login';
   };
 
-  return { user, loading, logout };
+  return { user, loading, logout, refreshUser };
 };

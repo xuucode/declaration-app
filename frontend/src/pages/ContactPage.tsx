@@ -44,7 +44,7 @@ const ContactPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-950 px-4 py-8">
-      <div className="absolute right-4 top-4">
+      <div className="auth-language-toggle">
         <LanguageToggle />
       </div>
       <div className="max-w-2xl mx-auto pt-12">
@@ -135,6 +135,9 @@ const ContactPage = () => {
           </Link>
           <Link to="/privacy" className="text-blue-400 hover:text-blue-300 mr-4">
             {t('privacy')}
+          </Link>
+          <Link to="/commercial-transaction" className="text-blue-400 hover:text-blue-300 mr-4">
+            {t('commercialTransaction')}
           </Link>
           <Link to={user ? '/mypage' : '/login'} className="text-blue-400 hover:text-blue-300">
             {t('backHome')}

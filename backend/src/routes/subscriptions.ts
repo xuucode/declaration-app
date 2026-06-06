@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import {
   createCheckoutSession,
+  confirmCheckoutSession,
   cancelSubscription,
   handleWebhook,
 } from '../controllers/subscriptionController.js';
@@ -12,6 +13,7 @@ const router = Router();
 router.post('/webhook', handleWebhook);
 
 router.post('/checkout', authMiddleware, createCheckoutSession);
+router.post('/confirm', authMiddleware, confirmCheckoutSession);
 router.post('/cancel', authMiddleware, cancelSubscription);
 
 export default router;

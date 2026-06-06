@@ -5,6 +5,8 @@ import { AuthRequest } from '../middleware/auth.js';
 import { v4 as uuidv4 } from 'uuid';
 import { uploadOgpImage } from '../ogp/uploadOgp.js';
 import { OgpType } from '../ogp/generateOgp.js';
+import { hasPremiumAccess } from '../utils/subscription.js';
+import { FREE_LIMITS, isItemLockedForFreePlan, markLockedItems } from '../utils/premiumLimits.js';
 
 // 宣言一覧取得
 export const getDeclarations = async (req: AuthRequest, res: Response): Promise<void> => {
@@ -24,7 +26,21 @@ export const getDeclarations = async (req: AuthRequest, res: Response): Promise<
       })
     );
 
-    res.status(200).json(result.Items ?? []);
+    const user = await docClient.send(
+      new GetCommand({
+        TableName: TABLES.USERS,
+        Key: { userId: req.userId },
+      })
+    );
+    const isPremium = hasPremiumAccess(user.Item);
+    const items = markLockedItems(
+      result.Items ?? [],
+      FREE_LIMITS.activeTasks,
+      (item) => item.status === 'pending',
+      isPremium
+    );
+
+    res.status(200).json(items);
   } catch (e: any) {
     res.status(500).json({ message: e.message });
   }
@@ -49,7 +65,7 @@ export const createDeclaration = async (req: AuthRequest, res: Response): Promis
     );
 
     const user = userResult.Item;
-    const isPremium = user?.subscriptionStatus === 'active';
+    const isPremium = hasPremiumAccess(user);
 
     if (!isPremium) {
       const today = new Date().toISOString().slice(0, 10);
@@ -150,7 +166,51 @@ export const updateDeclarationStatus = async (req: AuthRequest, res: Response): 
     return;
   }
 
-  try {
+    try {
+    const declarationResult = await docClient.send(
+      new GetCommand({
+        TableName: TABLES.DECLARATIONS,
+        Key: { declarationId: id },
+      })
+    );
+    const declaration = declarationResult.Item;
+    if (!declaration || declaration.userId !== req.userId) {
+      res.status(404).json({ message: '宣言が見つかりません' });
+      return;
+    }
+
+    const premiumUserResult = await docClient.send(
+      new GetCommand({
+        TableName: TABLES.USERS,
+        Key: { userId: req.userId },
+      })
+    );
+    const isPremium = hasPremiumAccess(premiumUserResult.Item);
+    const declarationsResult = await docClient.send(
+      new QueryCommand({
+        TableName: TABLES.DECLARATIONS,
+        IndexName: 'userId-createdAt-index',
+        KeyConditionExpression: 'userId = :userId',
+        FilterExpression: '#type = :type OR attribute_not_exists(#type)',
+        ExpressionAttributeNames: { '#type': 'type' },
+        ExpressionAttributeValues: {
+          ':userId': req.userId,
+          ':type': 'task',
+        },
+      })
+    );
+    const isLocked = isItemLockedForFreePlan(
+      declarationsResult.Items ?? [],
+      id,
+      FREE_LIMITS.activeTasks,
+      (item) => item.status === 'pending',
+      isPremium
+    );
+    if (isLocked) {
+      res.status(403).json({ message: 'この宣言はPremiumで再開できます。' });
+      return;
+    }
+
     const reportedAt = new Date().toISOString();
 
     await docClient.send(
@@ -214,14 +274,14 @@ export const updateDeclarationStatus = async (req: AuthRequest, res: Response): 
 }
 
     // OGP画像生成（非同期）
-    const userResult = await docClient.send(
+    const ogpUserResult = await docClient.send(
       new GetCommand({
         TableName: TABLES.USERS,
         Key: { userId: req.userId },
       })
     );
-    const displayName = userResult.Item?.displayName ?? '';
-    const newStreakCount = userResult.Item?.streakCount ?? 0;
+    const displayName = ogpUserResult.Item?.displayName ?? '';
+    const newStreakCount = ogpUserResult.Item?.streakCount ?? 0;
 
     uploadOgpImage({
       declarationId: id,
