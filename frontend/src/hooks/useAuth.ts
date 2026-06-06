@@ -11,6 +11,7 @@ interface User {
   subscriptionStatus?: string;
   stripeCustomerId?: string;
   subscriptionId?: string;
+  goal?: string;
 }
 
 export const useAuth = () => {

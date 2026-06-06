@@ -222,3 +222,93 @@ export const updateHabit = async (req: AuthRequest, res: Response): Promise<void
     res.status(500).json({ message: e.message });
   }
 };
+
+// 未記録の習慣を自動で未達成にする
+export const autoFailUnloggedHabits = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const habitsResult = await docClient.send(
+      new QueryCommand({
+        TableName: TABLES.DECLARATIONS,
+        IndexName: 'userId-createdAt-index',
+        KeyConditionExpression: 'userId = :userId',
+        FilterExpression: '#type = :type AND #status = :status',
+        ExpressionAttributeNames: {
+          '#type': 'type',
+          '#status': 'status',
+        },
+        ExpressionAttributeValues: {
+          ':userId': req.userId,
+          ':type': 'habit',
+          ':status': 'active',
+        },
+      })
+    );
+
+    const habits = habitsResult.Items ?? [];
+    const today = new Date().toISOString().slice(0, 10);
+    const unloggedHabits = [];
+
+    for (const habit of habits) {
+      // 今日以外の直近7日間の未記録をチェック
+      for (let i = 1; i <= 7; i++) {
+        const date = new Date();
+        date.setDate(date.getDate() - i);
+        const dateStr = date.toISOString().slice(0, 10);
+
+        // その日のログを確認
+        const logResult = await docClient.send(
+          new QueryCommand({
+            TableName: TABLES.DAILY_LOGS,
+            KeyConditionExpression: 'habitId = :habitId AND #date = :date',
+            ExpressionAttributeNames: { '#date': 'date' },
+            ExpressionAttributeValues: {
+              ':habitId': habit.declarationId,
+              ':date': dateStr,
+            },
+          })
+        );
+
+        // ログがない場合は自動で未達成を記録
+        if ((logResult.Items?.length ?? 0) === 0) {
+          const logId = uuidv4();
+          await docClient.send(
+            new PutCommand({
+              TableName: TABLES.DAILY_LOGS,
+              Item: {
+                habitId: habit.declarationId,
+                date: dateStr,
+                logId,
+                userId: req.userId,
+                result: 'failed',
+                value: null,
+                autoFailed: true,
+                createdAt: new Date().toISOString(),
+              },
+            })
+          );
+          unloggedHabits.push({
+            declarationId: habit.declarationId,
+            title: habit.title,
+            date: dateStr,
+          });
+        }
+      }
+    }
+
+    // streakCountをリセット
+    if (unloggedHabits.length > 0) {
+      await docClient.send(
+        new UpdateCommand({
+          TableName: TABLES.USERS,
+          Key: { userId: req.userId },
+          UpdateExpression: 'SET streakCount = :zero',
+          ExpressionAttributeValues: { ':zero': 0 },
+        })
+      );
+    }
+
+    res.status(200).json({ unloggedHabits });
+  } catch (e: any) {
+    res.status(500).json({ message: e.message });
+  }
+};

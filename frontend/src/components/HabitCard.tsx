@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../utils/api.js';
-
+import ShareButton from './ShareButton.js';
 
 interface Habit {
   declarationId: string;
@@ -22,7 +22,8 @@ const HabitCard = ({ habit, onUpdate }: HabitCardProps) => {
   const [loading, setLoading] = useState(false);
   const [value, setValue] = useState('');
   const [error, setError] = useState('');
-  const [logged, setLogged] = useState(false);
+  const [logResult, setLogResult] = useState<'achieved' | 'failed' | null>(null);
+  const [requiresShare, setRequiresShare] = useState(false);
   const [checkingLog, setCheckingLog] = useState(true);
   const [showEdit, setShowEdit] = useState(false);
   const [editTitle, setEditTitle] = useState(habit.title);
@@ -30,20 +31,25 @@ const HabitCard = ({ habit, onUpdate }: HabitCardProps) => {
   const [editLimitValue, setEditLimitValue] = useState(habit.limitValue?.toString() ?? '');
 
   useEffect(() => {
-  const checkTodayLog = async () => {
-    try {
-      const res = await api.get(`/habits/${habit.declarationId}/logs`);
-      const today = new Date().toISOString().slice(0, 10);
-      const todayLog = res.data.find((log: { date: string }) => log.date === today);
-      if (todayLog) setLogged(true);
-    } catch {
-      // エラー時は何もしない
-    } finally {
-      setCheckingLog(false);
-    }
-  };
-  checkTodayLog();
-}, [habit.declarationId]);
+    const checkTodayLog = async () => {
+      try {
+        const res = await api.get(`/habits/${habit.declarationId}/logs`);
+        const today = new Date().toISOString().slice(0, 10);
+        const todayLog = res.data.find((log: { date: string; result: string; autoFailed?: boolean }) => log.date === today);
+        if (todayLog) {
+          setLogResult(todayLog.result);
+          if (todayLog.result === 'failed' && !todayLog.autoFailed) {
+            setRequiresShare(true);
+          }
+        }
+      } catch {
+        // エラー時は何もしない
+      } finally {
+        setCheckingLog(false);
+      }
+    };
+    checkTodayLog();
+  }, [habit.declarationId]);
 
   const handleLog = async (result: 'achieved' | 'failed') => {
     if (result === 'achieved' && habit.limitType === 'count' && value) {
@@ -61,7 +67,10 @@ const HabitCard = ({ habit, onUpdate }: HabitCardProps) => {
         result,
         value: value ? Number(value) : null,
       });
-      setLogged(true);
+      setLogResult(result);
+      if (result === 'failed') {
+        setRequiresShare(true);
+      }
       onUpdate();
     } catch (err) {
       const message = (err as { response?: { data?: { message?: string } } }).response?.data?.message;
@@ -113,12 +122,12 @@ const HabitCard = ({ habit, onUpdate }: HabitCardProps) => {
   };
 
   if (checkingLog) {
-  return (
-    <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 mb-4">
-      <p className="text-gray-500 text-sm">読み込み中...</p>
-    </div>
-  );
-}
+    return (
+      <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 mb-4">
+        <p className="text-gray-500 text-sm">読み込み中...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 mb-4">
@@ -206,9 +215,32 @@ const HabitCard = ({ habit, onUpdate }: HabitCardProps) => {
         </form>
       )}
 
-      {logged ? (
+      {requiresShare ? (
+        <div className="bg-red-900/20 border border-red-800 rounded-lg p-4">
+          <p className="text-red-400 text-sm font-semibold mb-3">
+            守れなかったことをXでシェアしてください
+          </p>
+          <ShareButton
+            declarationId={habit.declarationId}
+            title={habit.title}
+            type="failed"
+            onShare={() => {
+              setRequiresShare(false);
+              onUpdate();
+            }}
+          />
+        </div>
+      ) : logResult === 'achieved' ? (
         <div className="bg-green-900/20 border border-green-800 rounded-lg px-4 py-3">
-          <p className="text-green-400 text-sm font-semibold">今日の記録完了です</p>
+          <p className="text-green-400 text-sm font-semibold">
+            今日は「{habit.title}」を達成しました！頑張りましたね🎉
+          </p>
+        </div>
+      ) : logResult === 'failed' ? (
+        <div className="bg-red-900/20 border border-red-800 rounded-lg px-4 py-3">
+          <p className="text-red-400 text-sm font-semibold">
+            今日は「{habit.title}」を達成できませんでした…😔
+          </p>
         </div>
       ) : !showEdit && (
         <div className="space-y-3">

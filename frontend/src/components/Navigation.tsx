@@ -13,6 +13,7 @@ const Navigation = () => {
   { label: '📋 タスク', path: '/tasks' },
   { label: '🔄 習慣', path: '/habits' },
   { label: '💰 支出', path: '/expenses' },
+  { label: '👤 プロフィール', path: '/profile' },
 ];
   return (
     <header className="border-b border-gray-800 px-4 py-4 bg-gray-950 sticky top-0 z-10">

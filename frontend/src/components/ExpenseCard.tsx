@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import api from '../utils/api.js';
+import ShareButton from './ShareButton.js';
 
 interface Expense {
   declarationId: string;
@@ -12,6 +13,7 @@ interface Expense {
   totalAmount: number;
   status: string;
   createdAt: string;
+  sharedAt?: string;
 }
 
 interface ExpenseCardProps {
@@ -33,6 +35,9 @@ const ExpenseCard = ({ expense, onUpdate }: ExpenseCardProps) => {
   const remaining = expense.limitAmount - expense.totalAmount;
   const percentage = Math.min(Math.round((expense.totalAmount / expense.limitAmount) * 100), 100);
   const isOver = expense.totalAmount > expense.limitAmount;
+
+  const today = new Date().toISOString().slice(0, 10);
+  const requiresShare = isOver && expense.periodEnd < today && !expense.sharedAt;
 
   const handleAddLog = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -203,6 +208,24 @@ const ExpenseCard = ({ expense, onUpdate }: ExpenseCardProps) => {
               />
             </div>
           </div>
+
+          {/* 超過シェア */}
+          {requiresShare && (
+            <div className="bg-red-900/20 border border-red-800 rounded-lg p-4 mb-4">
+              <p className="text-red-400 text-sm font-semibold mb-3">
+                「{expense.title}」が予算を超過して期間が終了しました。Xでシェアしてください。
+              </p>
+              <ShareButton
+                declarationId={expense.declarationId}
+                title={`${expense.title}の予算¥${expense.limitAmount.toLocaleString()}を¥${expense.totalAmount.toLocaleString()}で超過しました`}
+                type="failed"
+                onShare={async () => {
+                await api.patch(`/expenses/${expense.declarationId}/shared`, {});
+                onUpdate();
+              }}
+              />
+            </div>
+          )}
 
           {/* 支出追加フォーム */}
           {showForm ? (

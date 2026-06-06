@@ -6,6 +6,7 @@ import {
   getHabitLogs,
   deleteHabit,
   updateHabit,
+  autoFailUnloggedHabits,
 } from '../controllers/habitController.js';
 import { authMiddleware } from '../middleware/auth.js';
 
@@ -17,5 +18,6 @@ router.post('/:id/log', authMiddleware, logHabit);
 router.get('/:id/logs', authMiddleware, getHabitLogs);
 router.delete('/:id', authMiddleware, deleteHabit);
 router.patch('/:id', authMiddleware, updateHabit);
+router.post('/auto-fail', authMiddleware, autoFailUnloggedHabits);
 
 export default router;

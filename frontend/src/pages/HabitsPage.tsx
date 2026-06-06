@@ -38,18 +38,32 @@ const HabitsPage = () => {
     }
   }, []);
 
-  useEffect(() => {
-    if (authLoading) return;
-    if (!user) {
-      navigate('/login');
-      return;
+  const [unloggedWarnings, setUnloggedWarnings] = useState<{declarationId: string, title: string, date: string}[]>([]);
+
+const checkAutoFail = useCallback(async () => {
+  try {
+    const res = await api.post('/habits/auto-fail', {});
+    if (res.data.unloggedHabits.length > 0) {
+      setUnloggedWarnings(res.data.unloggedHabits);
     }
-    const load = async () => {
-      await fetchHabits();
-      setLoading(false);
-    };
-    load();
-  }, [authLoading, user, navigate, fetchHabits]);
+  } catch {
+    // エラー時は何もしない
+  }
+}, []);
+
+  useEffect(() => {
+  if (authLoading) return;
+  if (!user) {
+    navigate('/login');
+    return;
+  }
+  const init = async () => {
+    await checkAutoFail();
+    await fetchHabits();
+    setLoading(false);
+  };
+  init();
+}, [authLoading, user, navigate, fetchHabits, checkAutoFail]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -94,6 +108,19 @@ const HabitsPage = () => {
             </span>
           )}
         </div>
+
+          {unloggedWarnings.length > 0 && (
+  <div className="bg-yellow-900/30 border border-yellow-800 rounded-xl p-4 mb-6">
+    <p className="text-yellow-400 font-semibold mb-2">⚠️ 未記録の習慣があります</p>
+    <ul className="space-y-1">
+      {unloggedWarnings.map((w, i) => (
+        <li key={i} className="text-yellow-300 text-sm">
+          ・「{w.title}」{w.date} が未記録のため未達成として記録されました
+        </li>
+      ))}
+    </ul>
+  </div>
+  )}
 
         {!showForm && (
           <button

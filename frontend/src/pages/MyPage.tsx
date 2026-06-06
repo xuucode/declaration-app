@@ -111,44 +111,49 @@ const MyPage = () => {
       <div className="max-w-2xl mx-auto px-4 py-8">
 
         {/* ユーザー情報 */}
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 mb-6">
-          <div className="flex justify-between items-start mb-3">
-            <h2 className="text-white text-xl font-bold">{user?.displayName}</h2>
-            {user?.subscriptionStatus === 'active' ? (
-              <span className="bg-yellow-500/20 text-yellow-400 border border-yellow-600 text-xs px-3 py-1 rounded-full font-semibold">
-                ⭐ Premium
-              </span>
-            ) : (
-              <button
-                onClick={async () => {
-                  try {
-                    const url = await createCheckoutSession();
-                    window.location.href = url;
-                  } catch {
-                    setError('決済画面の表示に失敗しました');
-                  }
-                }}
-                className="bg-yellow-500 hover:bg-yellow-400 text-gray-950 text-xs px-3 py-1 rounded-full font-semibold transition-colors"
-              >
-                ⭐ Premiumにする
-              </button>
-            )}
-          </div>
-          <div className="flex gap-6">
-            <div className="text-center">
-              <p className="text-2xl font-bold text-orange-400">🔥 {user?.streakCount}</p>
-              <p className="text-gray-500 text-xs mt-1">連続達成日数</p>
-            </div>
-            <div className="text-center">
-              <p className="text-2xl font-bold text-blue-400">{achieveRate}%</p>
-              <p className="text-gray-500 text-xs mt-1">達成率</p>
-            </div>
-            <div className="text-center">
-              <p className="text-2xl font-bold text-white">{declarations.length}</p>
-              <p className="text-gray-500 text-xs mt-1">総宣言数</p>
-            </div>
-          </div>
-        </div>
+<div className="bg-gray-900 border border-gray-800 rounded-xl p-6 mb-6">
+  <div className="flex justify-between items-center mb-4">
+    <div>
+      <h2 className="text-white text-xl font-bold">{user?.displayName}</h2>
+      {user?.goal && (
+        <p className="text-gray-200 text-sm mt-1">{user.goal}</p>
+      )}
+    </div>
+    {user?.subscriptionStatus === 'active' ? (
+      <span className="bg-yellow-500/20 text-yellow-400 border border-yellow-600 text-xs px-3 py-1 rounded-full font-semibold whitespace-nowrap">
+        ⭐ Premium
+      </span>
+    ) : (
+      <button
+        onClick={async () => {
+          try {
+            const url = await createCheckoutSession();
+            window.location.href = url;
+          } catch {
+            setError('決済画面の表示に失敗しました');
+          }
+        }}
+        className="bg-yellow-500 hover:bg-yellow-400 text-gray-950 text-xs px-3 py-1 rounded-full font-semibold transition-colors whitespace-nowrap"
+      >
+        ⭐ Premiumにする
+      </button>
+    )}
+  </div>
+  <div className="flex gap-6">
+    <div className="text-center">
+      <p className="text-2xl font-bold text-orange-400">🔥 {user?.streakCount}</p>
+      <p className="text-gray-500 text-xs mt-1">連続達成日数</p>
+    </div>
+    <div className="text-center">
+      <p className="text-2xl font-bold text-blue-400">{achieveRate}%</p>
+      <p className="text-gray-500 text-xs mt-1">達成率</p>
+    </div>
+    <div className="text-center">
+      <p className="text-2xl font-bold text-white">{declarations.length}</p>
+      <p className="text-gray-500 text-xs mt-1">総宣言数</p>
+    </div>
+  </div>
+</div>
 
         {error && (
           <div className="bg-red-900/30 border border-red-800 rounded-lg px-4 py-3 mb-4">

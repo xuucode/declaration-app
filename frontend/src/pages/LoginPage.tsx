@@ -60,6 +60,12 @@ const LoginPage = () => {
                 required
               />
             </div>
+
+            <div className="text-right">
+            <Link to="/forgot-password" className="text-blue-400 hover:text-blue-300 text-sm">
+            パスワードをお忘れの方
+          </Link>
+            </div>
             {error && (
               <div className="bg-red-900/30 border border-red-800 rounded-lg px-4 py-3">
                 <p className="text-red-400 text-sm">{error}</p>

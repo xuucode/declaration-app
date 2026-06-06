@@ -271,6 +271,18 @@ const TasksPage = () => {
           </div>
         )}
 
+        {/* 未共有の未達成タスク */}
+        {declarations.filter((d) => d.status === 'failed' && !d.sharedAt).length > 0 && (
+      <div className="mb-6">
+    <h2 className="text-white font-semibold text-lg mb-4">⚠️ シェアが必要なタスク</h2>
+       {declarations
+      .filter((d) => d.status === 'failed' && !d.sharedAt)
+      .map((d) => (
+        <DeclarationCard key={d.declarationId} declaration={d} onUpdate={fetchDeclarations} />
+      ))}
+    </div>
+    )}
+
         {/* 進行中の宣言 */}
         <h2 className="text-white font-semibold text-lg mb-4">進行中の宣言</h2>
         {declarations.filter((d) => d.status === 'pending').length === 0 ? (

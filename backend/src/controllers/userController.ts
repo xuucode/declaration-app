@@ -26,22 +26,33 @@ export const getMe = async (req: AuthRequest, res: Response): Promise<void> => {
 
 // ユーザー情報更新
 export const updateMe = async (req: AuthRequest, res: Response): Promise<void> => {
-  const { displayName } = req.body;
+  const { displayName, goal } = req.body;
 
-  if (!displayName) {
+  if (!displayName && goal === undefined) {
     res.status(400).json({ message: '必須項目が不足しています' });
     return;
   }
 
   try {
+    const updateExpressions: string[] = [];
+    const expressionValues: Record<string, string> = {};
+
+    if (displayName) {
+      updateExpressions.push('displayName = :displayName');
+      expressionValues[':displayName'] = displayName;
+    }
+
+    if (goal !== undefined) {
+      updateExpressions.push('goal = :goal');
+      expressionValues[':goal'] = goal;
+    }
+
     await docClient.send(
       new UpdateCommand({
         TableName: TABLES.USERS,
         Key: { userId: req.userId },
-        UpdateExpression: 'SET displayName = :displayName',
-        ExpressionAttributeValues: {
-          ':displayName': displayName,
-        },
+        UpdateExpression: `SET ${updateExpressions.join(', ')}`,
+        ExpressionAttributeValues: expressionValues,
       })
     );
 

@@ -3,6 +3,10 @@ import {
   SignUpCommand,
   ConfirmSignUpCommand,
   InitiateAuthCommand,
+  ChangePasswordCommand,
+  UpdateUserAttributesCommand,
+  ForgotPasswordCommand,
+  ConfirmForgotPasswordCommand,
 } from '@aws-sdk/client-cognito-identity-provider';
 import { PutCommand } from '@aws-sdk/lib-dynamodb';
 import { cognitoClient, COGNITO_CONFIG } from '../config/cognito.js';
@@ -102,6 +106,105 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       idToken: tokens?.IdToken,
       refreshToken: tokens?.RefreshToken,
     });
+  } catch (e: any) {
+    res.status(400).json({ message: e.message });
+  }
+};
+
+// パスワード変更
+export const changePassword = async (req: Request, res: Response): Promise<void> => {
+  const { currentPassword, newPassword } = req.body;
+  const authHeader = req.headers.authorization;
+  const token = authHeader?.split(' ')[1];
+
+  if (!currentPassword || !newPassword || !token) {
+    res.status(400).json({ message: '必須項目が不足しています' });
+    return;
+  }
+
+  try {
+    await cognitoClient.send(
+      new ChangePasswordCommand({
+        AccessToken: token,
+        PreviousPassword: currentPassword,
+        ProposedPassword: newPassword,
+      })
+    );
+
+    res.status(200).json({ message: 'パスワードを更新しました' });
+  } catch (e: any) {
+    res.status(400).json({ message: e.message });
+  }
+};
+
+// メールアドレス変更
+export const changeEmail = async (req: Request, res: Response): Promise<void> => {
+  const { newEmail, currentPassword } = req.body;
+  const authHeader = req.headers.authorization;
+  const token = authHeader?.split(' ')[1];
+
+  if (!newEmail || !currentPassword || !token) {
+    res.status(400).json({ message: '必須項目が不足しています' });
+    return;
+  }
+
+  try {
+    await cognitoClient.send(
+      new UpdateUserAttributesCommand({
+        AccessToken: token,
+        UserAttributes: [{ Name: 'email', Value: newEmail }],
+      })
+    );
+
+    res.status(200).json({ message: '確認メールを送信しました' });
+  } catch (e: any) {
+    res.status(400).json({ message: e.message });
+  }
+};
+
+// パスワードリセット要求
+export const forgotPassword = async (req: Request, res: Response): Promise<void> => {
+  const { email } = req.body;
+
+  if (!email) {
+    res.status(400).json({ message: 'メールアドレスが必要です' });
+    return;
+  }
+
+  try {
+    await cognitoClient.send(
+      new ForgotPasswordCommand({
+        ClientId: COGNITO_CONFIG.CLIENT_ID,
+        Username: email,
+      })
+    );
+
+    res.status(200).json({ message: 'リセットコードを送信しました' });
+  } catch (e: any) {
+    res.status(400).json({ message: e.message });
+  }
+};
+
+// パスワードリセット確定
+export const confirmForgotPassword = async (req: Request, res: Response): Promise<void> => {
+  const { email, code, newPassword } = req.body;
+
+  if (!email || !code || !newPassword) {
+    res.status(400).json({ message: '必須項目が不足しています' });
+    return;
+  }
+
+  try {
+    await cognitoClient.send(
+      new ConfirmForgotPasswordCommand({
+        ClientId: COGNITO_CONFIG.CLIENT_ID,
+        Username: email,
+        ConfirmationCode: code,
+        Password: newPassword,
+      })
+    );
+
+    res.status(200).json({ message: 'パスワードをリセットしました' });
   } catch (e: any) {
     res.status(400).json({ message: e.message });
   }
