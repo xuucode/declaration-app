@@ -4,6 +4,7 @@ import api from '../utils/api.js';
 import { useAuth } from '../hooks/useAuth.js';
 import DeclarationCard from '../components/DeclarationCard.js';
 import Navigation from '../components/Navigation.js';
+import { useLanguage } from '../i18n.js';
 
 interface Declaration {
   declarationId: string;
@@ -20,6 +21,7 @@ interface Declaration {
 const TaskHistoryPage = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
+  const { t } = useLanguage();
   const [declarations, setDeclarations] = useState<Declaration[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'done' | 'failed'>('all');
@@ -30,7 +32,7 @@ const TaskHistoryPage = () => {
       const res = await api.get('/declarations');
       setDeclarations(res.data.filter((d: Declaration) => d.status !== 'pending'));
     } catch {
-      setError('宣言の取得に失敗しました');
+      setError(t('declarationFetchFailed'));
     }
   }, []);
 
@@ -54,7 +56,7 @@ const TaskHistoryPage = () => {
   if (authLoading || loading) {
     return (
       <div className="min-h-screen bg-gray-950 flex items-center justify-center">
-        <p className="text-gray-400">読み込み中...</p>
+        <p className="text-gray-400">{t('loading')}</p>
       </div>
     );
   }
@@ -68,17 +70,17 @@ const TaskHistoryPage = () => {
             onClick={() => navigate('/tasks')}
             className="text-gray-400 hover:text-white transition-colors"
           >
-            ← 戻る
+            {t('back')}
           </button>
-          <h2 className="text-white text-2xl font-bold">完了したタスク</h2>
+          <h2 className="text-white text-2xl font-bold">{t('completedTasks')}</h2>
         </div>
 
         {/* フィルター */}
         <div className="flex gap-2 mb-6">
           {[
-            { label: 'すべて', value: 'all' },
-            { label: '✅ 達成', value: 'done' },
-            { label: '❌ 未達成', value: 'failed' },
+            { label: t('all'), value: 'all' },
+            { label: t('statusDone'), value: 'done' },
+            { label: t('statusFailed'), value: 'failed' },
           ].map(({ label, value }) => (
             <button
               key={value}
@@ -102,7 +104,7 @@ const TaskHistoryPage = () => {
 
         {filtered.length === 0 ? (
           <div className="text-center py-16">
-            <p className="text-gray-500">該当する宣言はありません</p>
+            <p className="text-gray-500">{t('noMatchingDeclarations')}</p>
           </div>
         ) : (
           filtered.map((d) => (

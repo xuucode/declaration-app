@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import api from '../utils/api.js';
 import ShareButton from './ShareButton.js';
+import { useLanguage } from '../i18n.js';
 
 interface Declaration {
   declarationId: string;
@@ -20,6 +21,7 @@ interface DeclarationCardProps {
 }
 
 const DeclarationCard = ({ declaration, onUpdate }: DeclarationCardProps) => {
+  const { t, locale } = useLanguage();
   const [loading, setLoading] = useState(false);
   const requiresShare = declaration.status === 'failed' && !declaration.sharedAt;
   const [error, setError] = useState('');
@@ -35,7 +37,7 @@ const DeclarationCard = ({ declaration, onUpdate }: DeclarationCardProps) => {
     onUpdate();
   } catch (err) {
     const message = (err as { response?: { data?: { message?: string } } }).response?.data?.message;
-    setError(message ?? '更新に失敗しました');
+    setError(message ?? t('updateFailed'));
   } finally {
     setLoading(false);
   }
@@ -43,9 +45,9 @@ const DeclarationCard = ({ declaration, onUpdate }: DeclarationCardProps) => {
 
 
   const statusConfig = {
-    pending: { label: '⏳ 進行中', className: 'bg-blue-900/30 text-blue-400 border-blue-800' },
-    done: { label: '✅ 達成', className: 'bg-green-900/30 text-green-400 border-green-800' },
-    failed: { label: '❌ 未達成', className: 'bg-red-900/30 text-red-400 border-red-800' },
+    pending: { label: t('statusPending'), className: 'bg-blue-900/30 text-blue-400 border-blue-800' },
+    done: { label: t('statusDone'), className: 'bg-green-900/30 text-green-400 border-green-800' },
+    failed: { label: t('statusFailed'), className: 'bg-red-900/30 text-red-400 border-red-800' },
   };
 
   const config = statusConfig[declaration.status] ?? statusConfig['pending'];
@@ -64,14 +66,14 @@ const DeclarationCard = ({ declaration, onUpdate }: DeclarationCardProps) => {
       )}
 
       <p className="text-gray-500 text-xs mb-4">
-        期限：{new Date(declaration.deadline).toLocaleString('ja-JP')}
+        {t('deadline')}：{new Date(declaration.deadline).toLocaleString(locale)}
       </p>
 
       {/* 未達成シェア必須 */}
       {requiresShare && (
         <div className="bg-red-900/20 border border-red-800 rounded-lg p-4 mb-4">
           <p className="text-red-400 text-sm font-semibold mb-3">
-            未達成をXでシェアしてから次の宣言を作成できます
+            {t('shareFailedTaskRequired')}
           </p>
           <ShareButton
             declarationId={declaration.declarationId}
@@ -94,7 +96,7 @@ const DeclarationCard = ({ declaration, onUpdate }: DeclarationCardProps) => {
         disabled={loading}
         className="flex-1 py-2 bg-green-700 hover:bg-green-600 text-white rounded-lg text-sm font-semibold transition-colors disabled:opacity-50"
       >
-        達成した
+        {t('achievedAction')}
       </button>
     )}
     {isPastDeadline && (
@@ -103,7 +105,7 @@ const DeclarationCard = ({ declaration, onUpdate }: DeclarationCardProps) => {
         disabled={loading}
         className="flex-1 py-2 bg-red-800 hover:bg-red-700 text-white rounded-lg text-sm font-semibold transition-colors disabled:opacity-50"
       >
-        未達成
+        {t('failedAction')}
       </button>
     )}
   </div>
@@ -113,7 +115,7 @@ const DeclarationCard = ({ declaration, onUpdate }: DeclarationCardProps) => {
       {declaration.status === 'done' && !declaration.reportedAt && (
         <div className="mt-3">
           <p className="text-gray-500 text-xs mb-2">
-            ※ シェアすることで達成率が上がると言われています
+            {t('shareTip')}
           </p>
           <ShareButton
             declarationId={declaration.declarationId}

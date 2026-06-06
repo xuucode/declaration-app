@@ -6,6 +6,7 @@ import DeclarationCard from '../components/DeclarationCard.js';
 import ShareButton from '../components/ShareButton.js';
 import Navigation from '../components/Navigation.js';
 import { createCheckoutSession } from '../utils/api.js';
+import { useLanguage } from '../i18n.js';
 
 interface Declaration {
   declarationId: string;
@@ -22,6 +23,7 @@ interface Declaration {
 const TasksPage = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
+  const { t } = useLanguage();
   const [declarations, setDeclarations] = useState<Declaration[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -37,7 +39,7 @@ const TasksPage = () => {
       const res = await api.get('/declarations');
       setDeclarations(res.data);
     } catch {
-      setError('宣言の取得に失敗しました');
+      setError(t('declarationFetchFailed'));
     }
   }, []);
 
@@ -72,14 +74,14 @@ const TasksPage = () => {
       fetchDeclarations();
     } catch (err) {
       const message = (err as { response?: { data?: { message?: string } } }).response?.data?.message;
-      setError(message ?? '宣言の作成に失敗しました');
+      setError(message ?? t('declarationCreateFailed'));
     }
   };
 
   if (authLoading || loading) {
     return (
       <div className="min-h-screen bg-gray-950 flex items-center justify-center">
-        <p className="text-gray-400">読み込み中...</p>
+        <p className="text-gray-400">{t('loading')}</p>
       </div>
     );
   }
@@ -88,14 +90,14 @@ const TasksPage = () => {
     <div className="min-h-screen bg-gray-950">
       <Navigation />
       <div className="max-w-2xl mx-auto px-4 py-8">
-        <h2 className="text-white text-2xl font-bold mb-6">タスク</h2>
+        <h2 className="text-white text-2xl font-bold mb-6">{t('tasks')}</h2>
 
         {/* 新規宣言作成後のシェア */}
         {newDeclaration && (
           <div className="bg-gray-900 border border-blue-800 rounded-xl p-5 mb-6">
-            <p className="text-white font-semibold mb-1">宣言を作成しました！</p>
+            <p className="text-white font-semibold mb-1">{t('declarationCreated')}</p>
             <p className="text-gray-400 text-sm mb-4">
-              ※ シェアすることで達成率が上がると言われています
+              {t('shareTip')}
             </p>
             <ShareButton
               declarationId={newDeclaration.declarationId}
@@ -107,7 +109,7 @@ const TasksPage = () => {
               onClick={() => setNewDeclaration(null)}
               className="w-full mt-2 py-2 text-gray-500 hover:text-gray-300 text-sm transition-colors"
             >
-              スキップ
+              {t('skip')}
             </button>
           </div>
         )}
@@ -117,7 +119,7 @@ const TasksPage = () => {
           <button
             onClick={() => {
               if (hasUnreportedFailed) {
-                setError('未達成の宣言をシェアしてから新しい宣言を作成してください');
+                setError(t('shareFailedBeforeNew'));
                 return;
               }
               setError('');
@@ -125,49 +127,49 @@ const TasksPage = () => {
             }}
             className="w-full py-4 bg-white text-gray-950 font-bold rounded-xl hover:bg-gray-200 transition-colors mb-6 text-lg"
           >
-            ＋ 新しくタスクを宣言する
+            {t('createNewTask')}
           </button>
         )}
 
         {/* 宣言作成フォーム */}
         {showForm && (
           <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 mb-6">
-            <h3 className="text-white font-semibold text-lg mb-4">新しい宣言</h3>
+            <h3 className="text-white font-semibold text-lg mb-4">{t('newDeclaration')}</h3>
             <form onSubmit={handleCreate} className="space-y-4">
               <div>
-                <label className="block text-sm text-gray-400 mb-1">タイトル</label>
+                <label className="block text-sm text-gray-400 mb-1">{t('title')}</label>
                 <input
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
-                  placeholder="今日中に〇〇を終わらせる"
+                  placeholder={t('declareTask')}
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm text-gray-400 mb-1">詳細（任意）</label>
+                <label className="block text-sm text-gray-400 mb-1">{t('detailsOptional')}</label>
                 <textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
-                  placeholder="具体的な内容を入力..."
+                  placeholder={t('detailsPlaceholder')}
                   rows={3}
                 />
               </div>
               <div>
-                <label className="block text-sm text-gray-400 mb-1">いつまでに達成する？</label>
+                <label className="block text-sm text-gray-400 mb-1">{t('deadlineQuestion')}</label>
                 <div className="flex gap-2 mb-2">
                   {[
-                    { label: '今日中' },
-                    { label: '明日中' },
-                    { label: 'カスタム' },
-                  ].map(({ label }) => (
+                    { value: 'today', label: t('today') },
+                    { value: 'tomorrow', label: t('tomorrow') },
+                    { value: 'custom', label: t('custom') },
+                  ].map(({ value, label }) => (
                     <button
-                      key={label}
+                      key={value}
                       type="button"
                       onClick={() => {
-                        if (label === 'カスタム') {
+                        if (value === 'custom') {
                           setIsCustomDeadline(true);
                           setDeadline('');
                           setTimeout(() => {
@@ -177,7 +179,7 @@ const TasksPage = () => {
                         }
                         setIsCustomDeadline(false);
                         const d = new Date();
-                        if (label === '今日中') {
+                        if (value === 'today') {
                           d.setHours(23, 59, 0, 0);
                         } else {
                           d.setDate(d.getDate() + 1);
@@ -188,7 +190,7 @@ const TasksPage = () => {
                         setDeadline(localDate.toISOString().slice(0, 16));
                       }}
                       className={`flex-1 py-2 text-sm rounded-lg border transition-colors
-                        ${label === 'カスタム' && isCustomDeadline
+                        ${value === 'custom' && isCustomDeadline
                           ? 'bg-blue-900/40 border-blue-500 text-blue-300'
                           : 'bg-gray-800 hover:bg-gray-700 text-gray-300 border-gray-700'
                         }`}
@@ -221,12 +223,12 @@ const TasksPage = () => {
                           const url = await createCheckoutSession();
                           window.location.href = url;
                         } catch {
-                          setError('決済画面の表示に失敗しました');
+                          setError(t('checkoutFailed'));
                         }
                       }}
                       className="mt-3 w-full bg-yellow-500 hover:bg-yellow-400 text-gray-950 font-semibold py-2 rounded-lg text-sm transition-colors"
                     >
-                      ⭐ Premiumにアップグレード
+                      {t('upgradePremium')}
                     </button>
                   )}
                 </div>
@@ -236,14 +238,14 @@ const TasksPage = () => {
                   type="submit"
                   className="flex-1 py-3 bg-white text-gray-950 font-semibold rounded-lg hover:bg-gray-200 transition-colors"
                 >
-                  宣言する
+                  {t('declare')}
                 </button>
                 <button
                   type="button"
                   onClick={() => { setShowForm(false); setError(''); }}
                   className="flex-1 py-3 bg-gray-800 text-gray-300 font-semibold rounded-lg hover:bg-gray-700 transition-colors"
                 >
-                  キャンセル
+                  {t('cancel')}
                 </button>
               </div>
             </form>
@@ -260,12 +262,12 @@ const TasksPage = () => {
                     const url = await createCheckoutSession();
                     window.location.href = url;
                   } catch {
-                    setError('決済画面の表示に失敗しました');
+                    setError(t('checkoutFailed'));
                   }
                 }}
                 className="mt-3 w-full bg-yellow-500 hover:bg-yellow-400 text-gray-950 font-semibold py-2 rounded-lg text-sm transition-colors"
               >
-                ⭐ Premiumにアップグレード
+                {t('upgradePremium')}
               </button>
             )}
           </div>
@@ -274,7 +276,7 @@ const TasksPage = () => {
         {/* 未共有の未達成タスク */}
         {declarations.filter((d) => d.status === 'failed' && !d.sharedAt).length > 0 && (
       <div className="mb-6">
-    <h2 className="text-white font-semibold text-lg mb-4">⚠️ シェアが必要なタスク</h2>
+    <h2 className="text-white font-semibold text-lg mb-4">{t('shareRequiredTasks')}</h2>
        {declarations
       .filter((d) => d.status === 'failed' && !d.sharedAt)
       .map((d) => (
@@ -284,10 +286,10 @@ const TasksPage = () => {
     )}
 
         {/* 進行中の宣言 */}
-        <h2 className="text-white font-semibold text-lg mb-4">進行中の宣言</h2>
+        <h2 className="text-white font-semibold text-lg mb-4">{t('activeDeclarations')}</h2>
         {declarations.filter((d) => d.status === 'pending').length === 0 ? (
           <div className="text-center py-8">
-            <p className="text-gray-500">進行中の宣言はありません</p>
+            <p className="text-gray-500">{t('noActiveDeclarations')}</p>
           </div>
         ) : (
           declarations
@@ -300,7 +302,7 @@ const TasksPage = () => {
           onClick={() => navigate('/tasks/history')}
           className="w-full py-3 bg-gray-900 border border-gray-800 text-gray-400 hover:text-white rounded-xl text-sm transition-colors mt-4"
         >
-          完了したタスクを見る →
+          {t('viewCompletedTasks')}
         </button>
       </div>
     </div>

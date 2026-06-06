@@ -1,1 +1,237 @@
 @import "tailwindcss";
+
+:root {
+  color-scheme: dark;
+  --surface-page: #050608;
+  --surface-header: #050608;
+  --surface-card: #101217;
+  --surface-card-strong: #151821;
+  --surface-input: #171a22;
+  --border-subtle: #252a34;
+  --border-strong: #343b49;
+  --text-primary: #f6f7f9;
+  --text-secondary: #c4cad4;
+  --text-muted: #858d9b;
+  --accent: #f8fafc;
+  --accent-text: #050608;
+  --focus: #60a5fa;
+}
+
+html {
+  background: var(--surface-page);
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  background:
+    radial-gradient(circle at top left, rgba(37, 99, 235, 0.12), transparent 28rem),
+    linear-gradient(180deg, #080a0f 0%, var(--surface-page) 24rem);
+  color: var(--text-primary);
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  letter-spacing: 0;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+::selection {
+  background: rgba(96, 165, 250, 0.35);
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #07080b;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #2f3542;
+  border: 2px solid #07080b;
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #465063;
+}
+
+.bg-gray-950 {
+  background-color: var(--surface-page) !important;
+}
+
+.bg-gray-900 {
+  background-color: var(--surface-card) !important;
+}
+
+.bg-gray-800 {
+  background-color: var(--surface-input) !important;
+}
+
+.border-gray-800,
+.border-gray-700 {
+  border-color: var(--border-subtle) !important;
+}
+
+.text-gray-300 {
+  color: var(--text-secondary) !important;
+}
+
+.text-gray-400 {
+  color: #a8b0bf !important;
+}
+
+.text-gray-500,
+.text-gray-600 {
+  color: var(--text-muted) !important;
+}
+
+.rounded-xl,
+.rounded-2xl {
+  border-radius: 0.5rem !important;
+}
+
+.max-w-2xl {
+  max-width: 52rem !important;
+}
+
+header {
+  background: var(--surface-header) !important;
+  backdrop-filter: none;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+header.bg-gray-950 {
+  background: var(--surface-header) !important;
+}
+
+.bg-gray-900.border,
+.bg-gray-800.border {
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.04) inset,
+    0 18px 48px rgba(0, 0, 0, 0.24);
+}
+
+input,
+textarea {
+  border-color: var(--border-subtle) !important;
+  background-color: var(--surface-input) !important;
+  color: var(--text-primary) !important;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #697080 !important;
+}
+
+input:hover,
+textarea:hover {
+  border-color: var(--border-strong) !important;
+}
+
+input:focus,
+textarea:focus,
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--focus) !important;
+  outline-offset: 2px;
+}
+
+.bg-white {
+  background-color: var(--accent) !important;
+  color: var(--accent-text) !important;
+}
+
+.hover\:bg-gray-200:hover {
+  background-color: #dfe5ee !important;
+}
+
+.hover\:bg-gray-700:hover,
+.hover\:bg-gray-800:hover {
+  background-color: var(--surface-card-strong) !important;
+}
+
+.bg-black {
+  background-color: #0b0d11 !important;
+}
+
+.bg-black:hover,
+.hover\:bg-gray-900:hover {
+  background-color: #181b23 !important;
+}
+
+.bg-red-900\/20,
+.bg-red-900\/30 {
+  background-color: rgba(127, 29, 29, 0.18) !important;
+}
+
+.bg-green-900\/20,
+.bg-green-900\/30 {
+  background-color: rgba(20, 83, 45, 0.18) !important;
+}
+
+.bg-blue-900\/30,
+.bg-blue-900\/40 {
+  background-color: rgba(30, 64, 175, 0.2) !important;
+}
+
+.bg-yellow-900\/30 {
+  background-color: rgba(113, 63, 18, 0.22) !important;
+}
+
+.bg-yellow-500 {
+  background-color: #facc15 !important;
+}
+
+.hover\:bg-yellow-400:hover {
+  background-color: #fde047 !important;
+}
+
+.text-white {
+  color: var(--text-primary) !important;
+}
+
+.text-xs,
+.text-sm {
+  line-height: 1.5;
+}
+
+.p-5 {
+  padding: 1.375rem !important;
+}
+
+.p-6,
+.p-8 {
+  padding: clamp(1.25rem, 3vw, 1.75rem) !important;
+}
+
+@media (max-width: 640px) {
+  .h-60 {
+    height: 10rem !important;
+  }
+
+  .h-28 {
+    height: 5.5rem !important;
+  }
+
+  .px-4 {
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+  }
+}

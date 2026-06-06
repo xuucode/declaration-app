@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import api from '../utils/api.js';
 import { useAuth } from '../hooks/useAuth.js';
 import DeclarationCard from '../components/DeclarationCard.js';
@@ -7,6 +7,7 @@ import HabitCard from '../components/HabitCard.js';
 import ExpenseCard from '../components/ExpenseCard.js';
 import Navigation from '../components/Navigation.js';
 import { createCheckoutSession } from '../utils/api.js';
+import { useLanguage } from '../i18n.js';
 
 interface Declaration {
   declarationId: string;
@@ -47,6 +48,7 @@ interface Expense {
 const MyPage = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
+  const { t } = useLanguage();
   const [declarations, setDeclarations] = useState<Declaration[]>([]);
   const [habits, setHabits] = useState<Habit[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -58,7 +60,7 @@ const MyPage = () => {
       const res = await api.get('/declarations');
       setDeclarations(res.data);
     } catch {
-      setError('宣言の取得に失敗しました');
+      setError(t('declarationFetchFailed'));
     }
   }, []);
 
@@ -100,7 +102,7 @@ const MyPage = () => {
   if (authLoading || loading) {
     return (
       <div className="min-h-screen bg-gray-950 flex items-center justify-center">
-        <p className="text-gray-400">読み込み中...</p>
+        <p className="text-gray-400">{t('loading')}</p>
       </div>
     );
   }
@@ -130,27 +132,27 @@ const MyPage = () => {
             const url = await createCheckoutSession();
             window.location.href = url;
           } catch {
-            setError('決済画面の表示に失敗しました');
+            setError(t('checkoutFailed'));
           }
         }}
         className="bg-yellow-500 hover:bg-yellow-400 text-gray-950 text-xs px-3 py-1 rounded-full font-semibold transition-colors whitespace-nowrap"
       >
-        ⭐ Premiumにする
+        {t('premiumUpgrade')}
       </button>
     )}
   </div>
   <div className="flex gap-6">
     <div className="text-center">
       <p className="text-2xl font-bold text-orange-400">🔥 {user?.streakCount}</p>
-      <p className="text-gray-500 text-xs mt-1">連続達成日数</p>
+      <p className="text-gray-500 text-xs mt-1">{t('streakDays')}</p>
     </div>
     <div className="text-center">
       <p className="text-2xl font-bold text-blue-400">{achieveRate}%</p>
-      <p className="text-gray-500 text-xs mt-1">達成率</p>
+      <p className="text-gray-500 text-xs mt-1">{t('achievementRate')}</p>
     </div>
     <div className="text-center">
       <p className="text-2xl font-bold text-white">{declarations.length}</p>
-      <p className="text-gray-500 text-xs mt-1">総宣言数</p>
+      <p className="text-gray-500 text-xs mt-1">{t('totalDeclarations')}</p>
     </div>
   </div>
 </div>
@@ -162,15 +164,15 @@ const MyPage = () => {
         )}
 
         {/* 進行中のタスク */}
-        <h2 className="text-white font-semibold text-lg mb-4">進行中のタスク</h2>
+        <h2 className="text-white font-semibold text-lg mb-4">{t('activeTasks')}</h2>
         {declarations.filter((d) => d.status === 'pending').length === 0 ? (
           <div className="text-center py-8">
-            <p className="text-gray-500">進行中のタスクはありません</p>
+            <p className="text-gray-500">{t('noActiveTasks')}</p>
             <button
               onClick={() => navigate('/tasks')}
               className="mt-4 px-6 py-3 bg-white text-gray-950 font-bold rounded-xl hover:bg-gray-200 transition-colors"
             >
-              タスクを宣言する
+              {t('declareTask')}
             </button>
           </div>
         ) : (
@@ -184,7 +186,7 @@ const MyPage = () => {
         {/* 進行中の習慣 */}
         {habits.length > 0 && (
           <>
-            <h2 className="text-white font-semibold text-lg mb-4 mt-8">進行中の習慣</h2>
+            <h2 className="text-white font-semibold text-lg mb-4 mt-8">{t('activeHabits')}</h2>
             {habits
               .filter((h) => h.status === 'active')
               .map((h) => (
@@ -196,7 +198,7 @@ const MyPage = () => {
         {/* 支出管理 */}
         {expenses.length > 0 && (
           <>
-            <h2 className="text-white font-semibold text-lg mb-4 mt-8">支出管理</h2>
+            <h2 className="text-white font-semibold text-lg mb-4 mt-8">{t('expenses')}</h2>
             {expenses
               .filter((e) => e.status === 'active')
               .map((e) => (
@@ -204,6 +206,17 @@ const MyPage = () => {
               ))}
           </>
         )}
+        <p className="text-center text-gray-600 mt-10 text-xs flex justify-center gap-4">
+          <Link to="/contact" className="hover:text-gray-300 transition-colors">
+            {t('contact')}
+          </Link>
+          <Link to="/terms" className="hover:text-gray-300 transition-colors">
+            {t('terms')}
+          </Link>
+          <Link to="/privacy" className="hover:text-gray-300 transition-colors">
+            {t('privacy')}
+          </Link>
+        </p>
       </div>
     </div>
   );

@@ -1,9 +1,12 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../utils/api.js';
+import LanguageToggle from '../components/LanguageToggle.js';
+import { useLanguage } from '../i18n.js';
 
 const ForgotPasswordPage = () => {
   const navigate = useNavigate();
+  const { language, t } = useLanguage();
   const [step, setStep] = useState<'request' | 'confirm'>('request');
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
@@ -22,7 +25,7 @@ const ForgotPasswordPage = () => {
       setStep('confirm');
     } catch (err) {
       const message = (err as { response?: { data?: { message?: string } } }).response?.data?.message;
-      setError(message ?? 'リセットコードの送信に失敗しました');
+      setError(message ?? t('resetCodeFailed'));
     } finally {
       setLoading(false);
     }
@@ -33,7 +36,7 @@ const ForgotPasswordPage = () => {
     setError('');
 
     if (newPassword !== confirmPassword) {
-      setError('パスワードが一致しません');
+      setError(t('passwordMismatch'));
       return;
     }
 
@@ -44,7 +47,7 @@ const ForgotPasswordPage = () => {
       navigate('/login');
     } catch (err) {
       const message = (err as { response?: { data?: { message?: string } } }).response?.data?.message;
-      setError(message ?? 'パスワードのリセットに失敗しました');
+      setError(message ?? t('resetFailed'));
     } finally {
       setLoading(false);
     }
@@ -53,15 +56,20 @@ const ForgotPasswordPage = () => {
   if (step === 'confirm') {
     return (
       <div className="min-h-screen bg-gray-950 flex items-center justify-center px-4">
+        <div className="absolute right-4 top-4">
+          <LanguageToggle />
+        </div>
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold text-white mb-2">パスワードリセット</h1>
-            <p className="text-gray-400">{email} にリセットコードを送信しました</p>
+            <h1 className="text-4xl font-bold text-white mb-2">{t('passwordReset')}</h1>
+            <p className="text-gray-400">
+              {language === 'ja' ? `${email} ${t('sentResetCode')}` : `${t('sentResetCode')} ${email}`}
+            </p>
           </div>
           <div className="bg-gray-900 rounded-2xl p-8 border border-gray-800">
             <form onSubmit={handleConfirm} className="space-y-4">
               <div>
-                <label className="block text-sm text-gray-400 mb-1">リセットコード</label>
+                <label className="block text-sm text-gray-400 mb-1">{t('resetCode')}</label>
                 <input
                   type="text"
                   value={code}
@@ -72,7 +80,7 @@ const ForgotPasswordPage = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm text-gray-400 mb-1">新しいパスワード</label>
+                <label className="block text-sm text-gray-400 mb-1">{t('newPassword')}</label>
                 <input
                   type="password"
                   value={newPassword}
@@ -83,7 +91,7 @@ const ForgotPasswordPage = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm text-gray-400 mb-1">新しいパスワード（確認）</label>
+                <label className="block text-sm text-gray-400 mb-1">{t('confirmNewPassword')}</label>
                 <input
                   type="password"
                   value={confirmPassword}
@@ -103,7 +111,7 @@ const ForgotPasswordPage = () => {
                 disabled={loading}
                 className="w-full bg-white text-gray-950 font-semibold py-3 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50"
               >
-                {loading ? 'リセット中...' : 'パスワードをリセット'}
+                {loading ? t('resetting') : t('resetPassword')}
               </button>
             </form>
           </div>
@@ -114,15 +122,18 @@ const ForgotPasswordPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-950 flex items-center justify-center px-4">
+      <div className="absolute right-4 top-4">
+        <LanguageToggle />
+      </div>
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-white mb-2">パスワードを忘れた方へ</h1>
-          <p className="text-gray-400">登録したメールアドレスにリセットコードを送ります</p>
+          <h1 className="text-4xl font-bold text-white mb-2">{t('forgotPasswordTitle')}</h1>
+          <p className="text-gray-400">{t('forgotPasswordLead')}</p>
         </div>
         <div className="bg-gray-900 rounded-2xl p-8 border border-gray-800">
           <form onSubmit={handleRequest} className="space-y-4">
             <div>
-              <label className="block text-sm text-gray-400 mb-1">メールアドレス</label>
+              <label className="block text-sm text-gray-400 mb-1">{t('email')}</label>
               <input
                 type="email"
                 value={email}
@@ -142,13 +153,24 @@ const ForgotPasswordPage = () => {
               disabled={loading}
               className="w-full bg-white text-gray-950 font-semibold py-3 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50"
             >
-              {loading ? '送信中...' : 'リセットコードを送信'}
+              {loading ? t('sending') : t('sendResetCode')}
             </button>
           </form>
         </div>
         <p className="text-center text-gray-500 mt-6 text-sm">
           <Link to="/login" className="text-blue-400 hover:text-blue-300">
-            ログインに戻る
+            {t('backToLogin')}
+          </Link>
+        </p>
+        <p className="text-center text-gray-600 mt-4 text-xs flex justify-center gap-4">
+          <Link to="/contact" className="hover:text-gray-300 transition-colors">
+            {t('contact')}
+          </Link>
+          <Link to="/terms" className="hover:text-gray-300 transition-colors">
+            {t('terms')}
+          </Link>
+          <Link to="/privacy" className="hover:text-gray-300 transition-colors">
+            {t('privacy')}
           </Link>
         </p>
       </div>

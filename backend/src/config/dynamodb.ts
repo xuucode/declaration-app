@@ -12,4 +12,5 @@ export const TABLES = {
   DECLARATIONS: 'declaration-app-declarations',
   DAILY_LOGS: 'declaration-app-daily-logs',
   EXPENSE_LOGS: 'declaration-app-expense-logs',
+  CONTACTS: 'declaration-app-contacts',
 };

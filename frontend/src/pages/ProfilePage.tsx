@@ -4,10 +4,12 @@ import api from '../utils/api.js';
 import { useAuth } from '../hooks/useAuth.js';
 import Navigation from '../components/Navigation.js';
 import { clearTokens } from '../utils/auth.js';
+import { useLanguage } from '../i18n.js';
 
 const ProfilePage = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
+  const { t } = useLanguage();
 
   const [displayName, setDisplayName] = useState(user?.displayName ?? '');
   const [goal, setGoal] = useState(user?.goal ?? '');
@@ -35,10 +37,10 @@ const ProfilePage = () => {
     setNameSuccess('');
     try {
       await api.patch('/users/me', { displayName });
-      setNameSuccess('表示名を更新しました');
+      setNameSuccess(t('displayNameUpdated'));
     } catch (err) {
       const message = (err as { response?: { data?: { message?: string } } }).response?.data?.message;
-      setNameError(message ?? '更新に失敗しました');
+      setNameError(message ?? t('updateFailed'));
     } finally {
       setLoading(false);
     }
@@ -51,10 +53,10 @@ const ProfilePage = () => {
     setGoalSuccess('');
     try {
       await api.patch('/users/me', { goal });
-      setGoalSuccess('目標を更新しました');
+      setGoalSuccess(t('goalUpdated'));
     } catch (err) {
       const message = (err as { response?: { data?: { message?: string } } }).response?.data?.message;
-      setGoalError(message ?? '更新に失敗しました');
+      setGoalError(message ?? t('updateFailed'));
     } finally {
       setLoading(false);
     }
@@ -67,7 +69,7 @@ const ProfilePage = () => {
     setPasswordSuccess('');
 
     if (newPassword !== confirmPassword) {
-      setPasswordError('新しいパスワードが一致しません');
+      setPasswordError(t('passwordMismatch'));
       setLoading(false);
       return;
     }
@@ -77,13 +79,13 @@ const ProfilePage = () => {
         currentPassword,
         newPassword,
       });
-      setPasswordSuccess('パスワードを更新しました');
+      setPasswordSuccess(t('passwordUpdated'));
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
     } catch (err) {
       const message = (err as { response?: { data?: { message?: string } } }).response?.data?.message;
-      setPasswordError(message ?? 'パスワードの更新に失敗しました');
+      setPasswordError(message ?? t('passwordUpdateFailed'));
     } finally {
       setLoading(false);
     }
@@ -100,19 +102,19 @@ const ProfilePage = () => {
         newEmail,
         currentPassword,
       });
-      setEmailSuccess('確認メールを送信しました。メールを確認してください。');
+      setEmailSuccess(t('emailConfirmSent'));
       setNewEmail('');
       setCurrentPassword('');
     } catch (err) {
       const message = (err as { response?: { data?: { message?: string } } }).response?.data?.message;
-      setEmailError(message ?? 'メールアドレスの更新に失敗しました');
+      setEmailError(message ?? t('emailUpdateFailed'));
     } finally {
       setLoading(false);
     }
   };
 
   const handleLogout = () => {
-    const confirmed = window.confirm('ログアウトしますか？');
+    const confirmed = window.confirm(t('logoutConfirm'));
     if (!confirmed) return;
     clearTokens();
     navigate('/login');
@@ -121,7 +123,7 @@ const ProfilePage = () => {
   if (authLoading) {
     return (
       <div className="min-h-screen bg-gray-950 flex items-center justify-center">
-        <p className="text-gray-400">読み込み中...</p>
+        <p className="text-gray-400">{t('loading')}</p>
       </div>
     );
   }
@@ -130,22 +132,22 @@ const ProfilePage = () => {
     <div className="min-h-screen bg-gray-950">
       <Navigation />
       <div className="max-w-2xl mx-auto px-4 py-8">
-        <h2 className="text-white text-2xl font-bold mb-6">プロフィール</h2>
+        <h2 className="text-white text-2xl font-bold mb-6">{t('profile')}</h2>
 
         {/* サブスクリプション状態 */}
         <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 mb-6">
-          <h3 className="text-white font-semibold mb-3">プラン</h3>
+          <h3 className="text-white font-semibold mb-3">{t('plan')}</h3>
           {user?.subscriptionStatus === 'active' ? (
             <div className="flex items-center gap-3">
               <span className="bg-yellow-500/20 text-yellow-400 border border-yellow-600 text-sm px-3 py-1 rounded-full font-semibold">
                 ⭐ Premium
               </span>
-              <p className="text-gray-400 text-sm">プレミアムプランをご利用中です</p>
+              <p className="text-gray-400 text-sm">{t('premiumActive')}</p>
             </div>
           ) : (
             <div>
               <span className="bg-gray-800 text-gray-400 border border-gray-700 text-sm px-3 py-1 rounded-full">
-                無料プラン
+                {t('freePlan')}
               </span>
             </div>
           )}
@@ -153,13 +155,13 @@ const ProfilePage = () => {
 
         {/* 目標宣言 */}
         <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 mb-6">
-          <h3 className="text-white font-semibold mb-4">あなたの目標</h3>
+          <h3 className="text-white font-semibold mb-4">{t('yourGoal')}</h3>
           <form onSubmit={handleUpdateGoal} className="space-y-3">
             <textarea
               value={goal}
               onChange={(e) => setGoal(e.target.value)}
               className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
-              placeholder="どんな人になりたいですか？あなたの目標を宣言しましょう"
+              placeholder={t('goalPlaceholder')}
               rows={3}
             />
             {goalError && <p className="text-red-400 text-sm">{goalError}</p>}
@@ -169,14 +171,14 @@ const ProfilePage = () => {
               disabled={loading}
               className="w-full py-3 bg-white text-gray-950 font-semibold rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50"
             >
-              目標を更新する
+              {t('updateGoal')}
             </button>
           </form>
         </div>
 
         {/* 表示名変更 */}
         <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 mb-6">
-          <h3 className="text-white font-semibold mb-4">表示名の変更</h3>
+          <h3 className="text-white font-semibold mb-4">{t('changeDisplayName')}</h3>
           <form onSubmit={handleUpdateName} className="space-y-3">
             <input
               type="text"
@@ -192,17 +194,17 @@ const ProfilePage = () => {
               disabled={loading}
               className="w-full py-3 bg-white text-gray-950 font-semibold rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50"
             >
-              表示名を更新する
+              {t('updateDisplayName')}
             </button>
           </form>
         </div>
 
         {/* パスワード変更 */}
         <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 mb-6">
-          <h3 className="text-white font-semibold mb-4">パスワードの変更</h3>
+          <h3 className="text-white font-semibold mb-4">{t('changePassword')}</h3>
           <form onSubmit={handleUpdatePassword} className="space-y-3">
             <div>
-              <label className="block text-sm text-gray-400 mb-1">現在のパスワード</label>
+              <label className="block text-sm text-gray-400 mb-1">{t('currentPassword')}</label>
               <input
                 type="password"
                 value={currentPassword}
@@ -212,7 +214,7 @@ const ProfilePage = () => {
               />
             </div>
             <div>
-              <label className="block text-sm text-gray-400 mb-1">新しいパスワード</label>
+              <label className="block text-sm text-gray-400 mb-1">{t('newPassword')}</label>
               <input
                 type="password"
                 value={newPassword}
@@ -222,7 +224,7 @@ const ProfilePage = () => {
               />
             </div>
             <div>
-              <label className="block text-sm text-gray-400 mb-1">新しいパスワード（確認）</label>
+              <label className="block text-sm text-gray-400 mb-1">{t('confirmNewPassword')}</label>
               <input
                 type="password"
                 value={confirmPassword}
@@ -238,17 +240,17 @@ const ProfilePage = () => {
               disabled={loading}
               className="w-full py-3 bg-white text-gray-950 font-semibold rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50"
             >
-              パスワードを更新する
+              {t('updatePassword')}
             </button>
           </form>
         </div>
 
         {/* メールアドレス変更 */}
         <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 mb-6">
-          <h3 className="text-white font-semibold mb-4">メールアドレスの変更</h3>
+          <h3 className="text-white font-semibold mb-4">{t('changeEmail')}</h3>
           <form onSubmit={handleUpdateEmail} className="space-y-3">
             <div>
-              <label className="block text-sm text-gray-400 mb-1">現在のパスワード（認証用）</label>
+              <label className="block text-sm text-gray-400 mb-1">{t('currentPasswordForAuth')}</label>
               <input
                 type="password"
                 value={currentPassword}
@@ -258,7 +260,7 @@ const ProfilePage = () => {
               />
             </div>
             <div>
-              <label className="block text-sm text-gray-400 mb-1">新しいメールアドレス</label>
+              <label className="block text-sm text-gray-400 mb-1">{t('newEmail')}</label>
               <input
                 type="email"
                 value={newEmail}
@@ -274,7 +276,7 @@ const ProfilePage = () => {
               disabled={loading}
               className="w-full py-3 bg-white text-gray-950 font-semibold rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50"
             >
-              メールアドレスを更新する
+              {t('updateEmail')}
             </button>
           </form>
         </div>
@@ -284,7 +286,7 @@ const ProfilePage = () => {
           onClick={handleLogout}
           className="w-full py-3 bg-red-900/30 border border-red-800 text-red-400 font-semibold rounded-xl hover:bg-red-900/50 transition-colors"
         >
-          ログアウト
+          {t('logout')}
         </button>
       </div>
     </div>

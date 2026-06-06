@@ -93,8 +93,23 @@ expenseLogTable.addGlobalSecondaryIndex({
   sortKey: { name: 'date', type: dynamodb.AttributeType.STRING },
 });
 
+// Contactテーブル（お問い合わせ保存用）
+const contactTable = new dynamodb.Table(this, 'ContactTable', {
+  tableName: 'declaration-app-contacts',
+  partitionKey: { name: 'contactId', type: dynamodb.AttributeType.STRING },
+  billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+  removalPolicy: cdk.RemovalPolicy.DESTROY,
+});
+
+contactTable.addGlobalSecondaryIndex({
+  indexName: 'createdAt-index',
+  partitionKey: { name: 'status', type: dynamodb.AttributeType.STRING },
+  sortKey: { name: 'createdAt', type: dynamodb.AttributeType.STRING },
+});
+
 new cdk.CfnOutput(this, 'DailyLogTableName', { value: dailyLogTable.tableName });
 new cdk.CfnOutput(this, 'ExpenseLogTableName', { value: expenseLogTable.tableName });
+new cdk.CfnOutput(this, 'ContactTableName', { value: contactTable.tableName });
 
     // OGP画像用S3バケット
 const ogpBucket = new s3.Bucket(this, 'OgpBucket', {
@@ -126,4 +141,3 @@ const ogpBucket = new s3.Bucket(this, 'OgpBucket', {
     new cdk.CfnOutput(this, 'DeclarationTableName', { value: declarationTable.tableName });
   }
 }
-

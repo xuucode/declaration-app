@@ -1,3 +1,5 @@
+import { useLanguage } from '../i18n.js';
+
 interface ShareButtonProps {
   declarationId: string;
   title: string;
@@ -6,10 +8,15 @@ interface ShareButtonProps {
 }
 
 const ShareButton = ({ declarationId, title, type, onShare }: ShareButtonProps) => {
+  const { language, t } = useLanguage();
   const url = `${window.location.origin}/declarations/${declarationId}`;
-  const text = type === 'declaration'
-    ? `「${title}」と宣言しました！達成できるか見届けてください💪`
-    : `「${title}」が未達成でした😔 次こそ達成します！`;
+  const text = language === 'ja'
+    ? (type === 'declaration'
+      ? `「${title}」と宣言しました！達成できるか見届けてください💪`
+      : `「${title}」が未達成でした😔 次こそ達成します！`)
+    : (type === 'declaration'
+      ? `I committed to "${title}"! Watch me follow through 💪`
+      : `I failed "${title}" 😔 I'll do better next time!`);
 
   const handleShare = () => {
     const tweetUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
@@ -23,7 +30,7 @@ const ShareButton = ({ declarationId, title, type, onShare }: ShareButtonProps) 
       className="w-full flex items-center justify-center gap-2 bg-black text-white font-semibold py-3 rounded-lg hover:bg-gray-900 transition-colors border border-gray-700"
     >
       <span className="text-lg font-bold">𝕏</span>
-      でシェアする
+      {t('shareOnX')}
     </button>
   );
 };

@@ -5,6 +5,7 @@ import { useAuth } from '../hooks/useAuth.js';
 import HabitCard from '../components/HabitCard.js';
 import Navigation from '../components/Navigation.js';
 import { createCheckoutSession } from '../utils/api.js';
+import { useLanguage } from '../i18n.js';
 
 interface Habit {
   declarationId: string;
@@ -20,6 +21,7 @@ interface Habit {
 const HabitsPage = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
+  const { t } = useLanguage();
   const [habits, setHabits] = useState<Habit[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -34,7 +36,7 @@ const HabitsPage = () => {
       const res = await api.get('/habits');
       setHabits(res.data);
     } catch {
-      setError('習慣の取得に失敗しました');
+      setError(t('habitFetchFailed'));
     }
   }, []);
 
@@ -84,14 +86,14 @@ const checkAutoFail = useCallback(async () => {
       fetchHabits();
     } catch (err) {
       const message = (err as { response?: { data?: { message?: string } } }).response?.data?.message;
-      setError(message ?? '習慣の作成に失敗しました');
+      setError(message ?? t('habitCreateFailed'));
     }
   };
 
   if (authLoading || loading) {
     return (
       <div className="min-h-screen bg-gray-950 flex items-center justify-center">
-        <p className="text-gray-400">読み込み中...</p>
+        <p className="text-gray-400">{t('loading')}</p>
       </div>
     );
   }
@@ -101,7 +103,7 @@ const checkAutoFail = useCallback(async () => {
       <Navigation />
       <div className="max-w-2xl mx-auto px-4 py-8">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-white text-2xl font-bold">習慣管理</h2>
+          <h2 className="text-white text-2xl font-bold">{t('habitManagement')}</h2>
           {user?.subscriptionStatus === 'active' && (
             <span className="bg-yellow-500/20 text-yellow-400 border border-yellow-600 text-xs px-3 py-1 rounded-full font-semibold">
               ⭐ Premium
@@ -111,11 +113,11 @@ const checkAutoFail = useCallback(async () => {
 
           {unloggedWarnings.length > 0 && (
   <div className="bg-yellow-900/30 border border-yellow-800 rounded-xl p-4 mb-6">
-    <p className="text-yellow-400 font-semibold mb-2">⚠️ 未記録の習慣があります</p>
+    <p className="text-yellow-400 font-semibold mb-2">{t('unloggedHabits')}</p>
     <ul className="space-y-1">
       {unloggedWarnings.map((w, i) => (
         <li key={i} className="text-yellow-300 text-sm">
-          ・「{w.title}」{w.date} が未記録のため未達成として記録されました
+          ・「{w.title}」{w.date} {t('unloggedHabitRecorded')}
         </li>
       ))}
     </ul>
@@ -130,37 +132,37 @@ const checkAutoFail = useCallback(async () => {
             }}
             className="w-full py-4 bg-white text-gray-950 font-bold rounded-xl hover:bg-gray-200 transition-colors mb-6 text-lg"
           >
-            ＋ 新しい習慣を追加
+            {t('addNewHabit')}
           </button>
         )}
 
         {showForm && (
           <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 mb-6">
-            <h3 className="text-white font-semibold text-lg mb-4">新しい習慣</h3>
+            <h3 className="text-white font-semibold text-lg mb-4">{t('newHabit')}</h3>
             <form onSubmit={handleCreate} className="space-y-4">
               <div>
-                <label className="block text-sm text-gray-400 mb-1">習慣名</label>
+                <label className="block text-sm text-gray-400 mb-1">{t('habitName')}</label>
                 <input
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
-                  placeholder="タバコを吸わない / SNSを30分以下にする"
+                  placeholder={t('habitPlaceholder')}
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm text-gray-400 mb-1">詳細（任意）</label>
+                <label className="block text-sm text-gray-400 mb-1">{t('detailsOptional')}</label>
                 <textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
-                  placeholder="目標の詳細を入力..."
+                  placeholder={t('detailsPlaceholder')}
                   rows={2}
                 />
               </div>
               <div>
-                <label className="block text-sm text-gray-400 mb-2">タイプ</label>
+                <label className="block text-sm text-gray-400 mb-2">{t('type')}</label>
                 <div className="flex gap-3">
                   <button
                     type="button"
@@ -171,7 +173,7 @@ const checkAutoFail = useCallback(async () => {
                         : 'bg-gray-800 text-gray-400 border-gray-700'
                     }`}
                   >
-                    やる/やらない
+                    {t('binaryType')}
                   </button>
                   <button
                     type="button"
@@ -182,13 +184,13 @@ const checkAutoFail = useCallback(async () => {
                         : 'bg-gray-800 text-gray-400 border-gray-700'
                     }`}
                   >
-                    回数制限
+                    {t('countLimit')}
                   </button>
                 </div>
               </div>
               {limitType === 'count' && (
                 <div>
-                  <label className="block text-sm text-gray-400 mb-1">上限回数</label>
+                  <label className="block text-sm text-gray-400 mb-1">{t('maxCount')}</label>
                   <input
                     type="number"
                     value={limitValue}
@@ -212,7 +214,7 @@ const checkAutoFail = useCallback(async () => {
                       }}
                       className="mt-3 w-full bg-yellow-500 hover:bg-yellow-400 text-gray-950 font-semibold py-2 rounded-lg text-sm transition-colors"
                     >
-                      ⭐ Premiumにアップグレード
+                      {t('upgradePremium')}
                     </button>
                   )}
                 </div>
@@ -222,14 +224,14 @@ const checkAutoFail = useCallback(async () => {
                   type="submit"
                   className="flex-1 py-3 bg-white text-gray-950 font-semibold rounded-lg hover:bg-gray-200 transition-colors"
                 >
-                  追加する
+                  {t('add')}
                 </button>
                 <button
                   type="button"
                   onClick={() => { setShowForm(false); setError(''); }}
                   className="flex-1 py-3 bg-gray-800 text-gray-300 font-semibold rounded-lg hover:bg-gray-700 transition-colors"
                 >
-                  キャンセル
+                  {t('cancel')}
                 </button>
               </div>
             </form>
@@ -238,8 +240,8 @@ const checkAutoFail = useCallback(async () => {
 
         {habits.length === 0 ? (
           <div className="text-center py-16">
-            <p className="text-gray-500">まだ習慣がありません</p>
-            <p className="text-gray-600 text-sm mt-2">禁煙・SNS制限など悪習慣を断ち切りましょう</p>
+            <p className="text-gray-500">{t('noHabits')}</p>
+            <p className="text-gray-600 text-sm mt-2">{t('noHabitsLead')}</p>
           </div>
         ) : (
           habits.map((h) => (

@@ -6,6 +6,7 @@ import declarationsRouter from './routes/declarations.js';
 import subscriptionsRouter from './routes/subscriptions.js';
 import habitsRouter from './routes/habits.js';
 import expensesRouter from './routes/expenses.js';
+import contactRouter from './routes/contact.js';
 
 const app = express();
 
@@ -29,5 +30,6 @@ app.use('/declarations', declarationsRouter);
 app.use('/subscriptions', subscriptionsRouter);
 app.use('/habits', habitsRouter);
 app.use('/expenses', expensesRouter);
+app.use('/contact', contactRouter);
 
 export default app;

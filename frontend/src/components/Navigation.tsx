@@ -1,42 +1,33 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth.js';
+import structHomeLogo from '../assets/struct-home.png';
+import LanguageToggle from './LanguageToggle.js';
+import { useLanguage } from '../i18n.js';
 
 const Navigation = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const { logout } = useAuth();
+  const { t } = useLanguage();
 
   const navItems = [
-  { label: '🏠 ホーム', path: '/mypage' },
-  { label: '📋 タスク', path: '/tasks' },
-  { label: '🔄 習慣', path: '/habits' },
-  { label: '💰 支出', path: '/expenses' },
-  { label: '👤 プロフィール', path: '/profile' },
-];
-  return (
-    <header className="border-b border-gray-800 px-4 py-4 bg-gray-950 sticky top-0 z-10">
-      <div className="max-w-2xl mx-auto flex justify-between items-center">
-        <h1 className="text-white font-bold text-xl">Stract</h1>
-        <div className="flex items-center gap-4">
-          {/* デスクトップナビ */}
-          <nav className="hidden md:flex gap-2">
-            {navItems.map((item) => (
-              <button
-                key={item.path}
-                onClick={() => navigate(item.path)}
-                className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors
-                  ${location.pathname === item.path
-                    ? 'bg-white text-gray-950'
-                    : 'text-gray-400 hover:text-white hover:bg-gray-800'
-                  }`}
-              >
-                {item.label}
-              </button>
-            ))}
-          </nav>
+    { label: t('navHome'), path: '/mypage' },
+    { label: t('navTasks'), path: '/tasks' },
+    { label: t('navHabits'), path: '/habits' },
+    { label: t('navExpenses'), path: '/expenses' },
+    { label: t('navProfile'), path: '/profile' },
+  ];
 
+  return (
+    <header className="border-b border-gray-800 px-4 py-3 bg-gray-950 sticky top-0 z-10">
+      <div className="max-w-2xl mx-auto flex justify-between items-start gap-4">
+        <img src={structHomeLogo} alt="Struct" className="h-24 w-auto max-w-[340px]" />
+        <div className="flex items-center gap-3 pt-1">
+          <div className="hidden sm:block">
+            <LanguageToggle />
+          </div>
           {/* ハンバーガーメニュー */}
           <button
             onClick={() => setMenuOpen(!menuOpen)}
@@ -48,6 +39,23 @@ const Navigation = () => {
           </button>
         </div>
       </div>
+
+      {/* デスクトップナビ */}
+      <nav className="max-w-2xl mx-auto mt-2 hidden md:grid grid-cols-5 gap-2">
+        {navItems.map((item) => (
+          <button
+            key={item.path}
+            onClick={() => navigate(item.path)}
+            className={`flex-1 px-3 py-2 rounded-lg text-sm font-semibold transition-colors
+              ${location.pathname === item.path
+                ? 'bg-white text-gray-950'
+                : 'text-gray-400 hover:text-white hover:bg-gray-800'
+              }`}
+          >
+            {item.label}
+          </button>
+        ))}
+      </nav>
 
       {/* モバイルメニュー */}
       {menuOpen && (
@@ -70,8 +78,11 @@ const Navigation = () => {
               onClick={logout}
               className="w-full text-left px-4 py-3 rounded-lg text-sm text-gray-500 hover:text-white transition-colors"
             >
-              ログアウト
+              {t('logout')}
             </button>
+            <div className="px-4 pt-2 sm:hidden">
+              <LanguageToggle />
+            </div>
           </div>
         </div>
       )}

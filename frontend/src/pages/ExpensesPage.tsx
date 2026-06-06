@@ -5,6 +5,7 @@ import { useAuth } from '../hooks/useAuth.js';
 import ExpenseCard from '../components/ExpenseCard.js';
 import Navigation from '../components/Navigation.js';
 import { createCheckoutSession } from '../utils/api.js';
+import { useLanguage } from '../i18n.js';
 
 interface Expense {
   declarationId: string;
@@ -22,6 +23,7 @@ interface Expense {
 const ExpensesPage = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
+  const { t } = useLanguage();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -36,7 +38,7 @@ const ExpensesPage = () => {
       const res = await api.get('/expenses');
       setExpenses(res.data);
     } catch {
-      setError('支出の取得に失敗しました');
+      setError(t('expenseFetchFailed'));
     }
   }, []);
 
@@ -72,14 +74,14 @@ const ExpensesPage = () => {
       fetchExpenses();
     } catch (err) {
       const message = (err as { response?: { data?: { message?: string } } }).response?.data?.message;
-      setError(message ?? '支出管理の作成に失敗しました');
+      setError(message ?? t('expenseCreateFailed'));
     }
   };
 
   if (authLoading || loading) {
     return (
       <div className="min-h-screen bg-gray-950 flex items-center justify-center">
-        <p className="text-gray-400">読み込み中...</p>
+        <p className="text-gray-400">{t('loading')}</p>
       </div>
     );
   }
@@ -89,7 +91,7 @@ const ExpensesPage = () => {
       <Navigation />
       <div className="max-w-2xl mx-auto px-4 py-8">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-white text-2xl font-bold">支出管理</h2>
+          <h2 className="text-white text-2xl font-bold">{t('expenseManagement')}</h2>
           {user?.subscriptionStatus === 'active' && (
             <span className="bg-yellow-500/20 text-yellow-400 border border-yellow-600 text-xs px-3 py-1 rounded-full font-semibold">
               ⭐ Premium
@@ -105,37 +107,37 @@ const ExpensesPage = () => {
             }}
             className="w-full py-4 bg-white text-gray-950 font-bold rounded-xl hover:bg-gray-200 transition-colors mb-6 text-lg"
           >
-            ＋ 支出管理を追加
+            {t('addExpenseManagement')}
           </button>
         )}
 
         {showForm && (
           <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 mb-6">
-            <h3 className="text-white font-semibold text-lg mb-4">新しい支出管理</h3>
+            <h3 className="text-white font-semibold text-lg mb-4">{t('newExpenseManagement')}</h3>
             <form onSubmit={handleCreate} className="space-y-4">
               <div>
-                <label className="block text-sm text-gray-400 mb-1">カテゴリ名</label>
+                <label className="block text-sm text-gray-400 mb-1">{t('categoryName')}</label>
                 <input
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
-                  placeholder="娯楽費 / 食費 / 交際費"
+                  placeholder={t('expenseCategoryPlaceholder')}
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm text-gray-400 mb-1">詳細（任意）</label>
+                <label className="block text-sm text-gray-400 mb-1">{t('detailsOptional')}</label>
                 <textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
-                  placeholder="管理する支出の詳細..."
+                  placeholder={t('expenseDetailsPlaceholder')}
                   rows={2}
                 />
               </div>
               <div>
-                <label className="block text-sm text-gray-400 mb-2">期間</label>
+                <label className="block text-sm text-gray-400 mb-2">{t('period')}</label>
                 <div className="flex gap-3">
                   <button
                     type="button"
@@ -146,7 +148,7 @@ const ExpensesPage = () => {
                         : 'bg-gray-800 text-gray-400 border-gray-700'
                     }`}
                   >
-                    月単位
+                    {t('monthly')}
                   </button>
                   <button
                     type="button"
@@ -157,12 +159,12 @@ const ExpensesPage = () => {
                         : 'bg-gray-800 text-gray-400 border-gray-700'
                     }`}
                   >
-                    週単位
+                    {t('weekly')}
                   </button>
                 </div>
               </div>
               <div>
-                <label className="block text-sm text-gray-400 mb-1">上限金額（円）</label>
+                <label className="block text-sm text-gray-400 mb-1">{t('limitAmountYen')}</label>
                 <input
                   type="number"
                   value={limitAmount}
@@ -185,7 +187,7 @@ const ExpensesPage = () => {
                       }}
                       className="mt-3 w-full bg-yellow-500 hover:bg-yellow-400 text-gray-950 font-semibold py-2 rounded-lg text-sm transition-colors"
                     >
-                      ⭐ Premiumにアップグレード
+                      {t('upgradePremium')}
                     </button>
                   )}
                 </div>
@@ -195,14 +197,14 @@ const ExpensesPage = () => {
                   type="submit"
                   className="flex-1 py-3 bg-white text-gray-950 font-semibold rounded-lg hover:bg-gray-200 transition-colors"
                 >
-                  追加する
+                  {t('add')}
                 </button>
                 <button
                   type="button"
                   onClick={() => { setShowForm(false); setError(''); }}
                   className="flex-1 py-3 bg-gray-800 text-gray-300 font-semibold rounded-lg hover:bg-gray-700 transition-colors"
                 >
-                  キャンセル
+                  {t('cancel')}
                 </button>
               </div>
             </form>
@@ -211,8 +213,8 @@ const ExpensesPage = () => {
 
         {expenses.length === 0 ? (
           <div className="text-center py-16">
-            <p className="text-gray-500">まだ支出管理がありません</p>
-            <p className="text-gray-600 text-sm mt-2">食費・娯楽費など支出をコントロールしましょう</p>
+            <p className="text-gray-500">{t('noExpenses')}</p>
+            <p className="text-gray-600 text-sm mt-2">{t('noExpensesLead')}</p>
           </div>
         ) : (
           expenses.map((e) => (

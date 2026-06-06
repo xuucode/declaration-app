@@ -9,24 +9,33 @@ import TasksPage from './pages/TasksPage.js';
 import TaskHistoryPage from './pages/TaskHistoryPage.js';
 import ProfilePage from './pages/ProfilePage.js';
 import ForgotPasswordPage from './pages/ForgotPasswordPage.js';
+import ContactPage from './pages/ContactPage.js';
+import TermsPage from './pages/TermsPage.js';
+import PrivacyPage from './pages/PrivacyPage.js';
+import { LanguageProvider } from './i18n.js';
 
 const App = () => {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Navigate to="/login" replace />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
-        <Route path="/mypage" element={<MyPage />} />
-        <Route path="/habits" element={<HabitsPage />} />
-        <Route path="/expenses" element={<ExpensesPage />} />
-        <Route path="/declarations/:id" element={<DeclarationPage />} />
-        <Route path="/tasks" element={<TasksPage />} />
-        <Route path="/tasks/history" element={<TaskHistoryPage />} />
-        <Route path="/profile" element={<ProfilePage />} />
-        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-      </Routes>
-    </BrowserRouter>
+    <LanguageProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<Navigate to="/login" replace />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+          <Route path="/mypage" element={<MyPage />} />
+          <Route path="/habits" element={<HabitsPage />} />
+          <Route path="/expenses" element={<ExpensesPage />} />
+          <Route path="/declarations/:id" element={<DeclarationPage />} />
+          <Route path="/tasks" element={<TasksPage />} />
+          <Route path="/tasks/history" element={<TaskHistoryPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/contact" element={<ContactPage />} />
+          <Route path="/terms" element={<TermsPage />} />
+          <Route path="/privacy" element={<PrivacyPage />} />
+        </Routes>
+      </BrowserRouter>
+    </LanguageProvider>
   );
 };
 

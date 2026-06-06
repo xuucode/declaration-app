@@ -38,6 +38,19 @@ export const createHabit = async (req: AuthRequest, res: Response): Promise<void
     return;
   }
 
+  if (!['binary', 'count'].includes(limitType)) {
+    res.status(400).json({ message: 'limitTypeはbinaryまたはcountである必要があります' });
+    return;
+  }
+
+  if (limitType === 'count') {
+    const numericLimit = Number(limitValue);
+    if (!Number.isFinite(numericLimit) || numericLimit < 1) {
+      res.status(400).json({ message: '回数制限では上限回数が必要です' });
+      return;
+    }
+  }
+
   try {
     // 無料プランの制約チェック
     const userResult = await docClient.send(
@@ -84,7 +97,7 @@ export const createHabit = async (req: AuthRequest, res: Response): Promise<void
       title,
       description: description ?? '',
       limitType,
-      limitValue: limitValue ?? null,
+      limitValue: limitType === 'count' ? Number(limitValue) : null,
       status: 'active',
       streakCount: 0,
       createdAt,
@@ -114,6 +127,45 @@ export const logHabit = async (req: AuthRequest, res: Response): Promise<void> =
   }
 
   try {
+    const habitResult = await docClient.send(
+      new GetCommand({
+        TableName: TABLES.DECLARATIONS,
+        Key: { declarationId: id },
+      })
+    );
+
+    const habit = habitResult.Item;
+    if (!habit || habit.userId !== req.userId || habit.type !== 'habit') {
+      res.status(404).json({ message: '習慣が見つかりません' });
+      return;
+    }
+
+    let actualValue: number | null = value ?? null;
+    if (habit.limitType === 'count') {
+      actualValue = Number(value);
+      const limitValue = Number(habit.limitValue);
+
+      if (!Number.isFinite(actualValue) || actualValue < 0) {
+        res.status(400).json({ message: '今日の実績回数を入力してください' });
+        return;
+      }
+
+      if (!Number.isFinite(limitValue) || limitValue < 1) {
+        res.status(400).json({ message: '習慣の上限回数が不正です' });
+        return;
+      }
+
+      if (result === 'achieved' && actualValue > limitValue) {
+        res.status(400).json({ message: '実績が上限を超えています。守れなかったを選択してください' });
+        return;
+      }
+
+      if (result === 'failed' && actualValue <= limitValue) {
+        res.status(400).json({ message: '実績が上限以下です。守れたを選択してください' });
+        return;
+      }
+    }
+
     const today = new Date().toISOString().slice(0, 10);
     const logId = uuidv4();
 
@@ -126,7 +178,7 @@ export const logHabit = async (req: AuthRequest, res: Response): Promise<void> =
           logId,
           userId: req.userId,
           result,
-          value: value ?? null,
+          value: actualValue,
           createdAt: new Date().toISOString(),
         },
       })
@@ -180,6 +232,45 @@ export const getHabitLogs = async (req: AuthRequest, res: Response): Promise<voi
   }
 };
 
+// 今日の習慣ログをシェア済みにする
+export const markHabitLogAsShared = async (req: AuthRequest, res: Response): Promise<void> => {
+  const id = req.params['id'] as string;
+
+  try {
+    const today = new Date().toISOString().slice(0, 10);
+
+    await docClient.send(
+      new UpdateCommand({
+        TableName: TABLES.DAILY_LOGS,
+        Key: {
+          habitId: id,
+          date: today,
+        },
+        UpdateExpression: 'SET sharedAt = :sharedAt',
+        ConditionExpression: '#userId = :userId AND #result = :result',
+        ExpressionAttributeNames: {
+          '#userId': 'userId',
+          '#result': 'result',
+        },
+        ExpressionAttributeValues: {
+          ':sharedAt': new Date().toISOString(),
+          ':userId': req.userId,
+          ':result': 'failed',
+        },
+      })
+    );
+
+    res.status(200).json({ message: 'シェア完了を記録しました' });
+  } catch (e: any) {
+    if (e.name === 'ConditionalCheckFailedException') {
+      res.status(404).json({ message: '未達成ログが見つかりません' });
+      return;
+    }
+
+    res.status(500).json({ message: e.message });
+  }
+};
+
 // 習慣削除
 export const deleteHabit = async (req: AuthRequest, res: Response): Promise<void> => {
   const id = req.params['id'] as string;
@@ -204,6 +295,27 @@ export const updateHabit = async (req: AuthRequest, res: Response): Promise<void
   const { title, description, limitValue } = req.body;
 
   try {
+    const habitResult = await docClient.send(
+      new GetCommand({
+        TableName: TABLES.DECLARATIONS,
+        Key: { declarationId: id },
+      })
+    );
+
+    const habit = habitResult.Item;
+    if (!habit || habit.userId !== req.userId || habit.type !== 'habit') {
+      res.status(404).json({ message: '習慣が見つかりません' });
+      return;
+    }
+
+    if (habit.limitType === 'count') {
+      const numericLimit = Number(limitValue);
+      if (!Number.isFinite(numericLimit) || numericLimit < 1) {
+        res.status(400).json({ message: '回数制限では上限回数が必要です' });
+        return;
+      }
+    }
+
     await docClient.send(
       new UpdateCommand({
         TableName: TABLES.DECLARATIONS,
@@ -212,7 +324,7 @@ export const updateHabit = async (req: AuthRequest, res: Response): Promise<void
         ExpressionAttributeValues: {
           ':title': title,
           ':description': description ?? '',
-          ':limitValue': limitValue ?? null,
+          ':limitValue': habit.limitType === 'count' ? Number(limitValue) : null,
         },
       })
     );
@@ -245,14 +357,22 @@ export const autoFailUnloggedHabits = async (req: AuthRequest, res: Response): P
     );
 
     const habits = habitsResult.Items ?? [];
-    const today = new Date().toISOString().slice(0, 10);
     const unloggedHabits = [];
 
     for (const habit of habits) {
+      const createdDate = new Date(habit.createdAt);
+      createdDate.setHours(0, 0, 0, 0);
+
       // 今日以外の直近7日間の未記録をチェック
       for (let i = 1; i <= 7; i++) {
         const date = new Date();
         date.setDate(date.getDate() - i);
+        date.setHours(0, 0, 0, 0);
+
+        if (date < createdDate) {
+          continue;
+        }
+
         const dateStr = date.toISOString().slice(0, 10);
 
         // その日のログを確認
@@ -286,6 +406,16 @@ export const autoFailUnloggedHabits = async (req: AuthRequest, res: Response): P
               },
             })
           );
+
+          await docClient.send(
+            new UpdateCommand({
+              TableName: TABLES.DECLARATIONS,
+              Key: { declarationId: habit.declarationId },
+              UpdateExpression: 'SET streakCount = :zero',
+              ExpressionAttributeValues: { ':zero': 0 },
+            })
+          );
+
           unloggedHabits.push({
             declarationId: habit.declarationId,
             title: habit.title,

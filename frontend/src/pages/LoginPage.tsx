@@ -2,9 +2,13 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../utils/api.js';
 import { saveTokens } from '../utils/auth.js';
+import structLogo from '../assets/struct.png';
+import LanguageToggle from '../components/LanguageToggle.js';
+import { useLanguage } from '../i18n.js';
 
 const LoginPage = () => {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -21,7 +25,7 @@ const LoginPage = () => {
       navigate('/mypage');
     } catch (err) {
       const message = (err as { response?: { data?: { message?: string } } }).response?.data?.message;
-      setError(message ?? 'ログインに失敗しました');
+      setError(message ?? t('loginFailed'));
     } finally {
       setLoading(false);
     }
@@ -29,17 +33,20 @@ const LoginPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-950 flex items-center justify-center px-4">
+      <div className="absolute right-4 top-4">
+        <LanguageToggle />
+      </div>
       <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-white mb-2">宣言する</h1>
-          <p className="text-gray-400">公開宣言で、やり遂げる力を手に入れよう</p>
+        <div className="text-center mb-6">
+          <img src={structLogo} alt="Struct" className="h-52 w-auto max-w-full mx-auto mb-4" />
+          <p className="text-gray-400">{t('tagline')}</p>
         </div>
 
         <div className="bg-gray-900 rounded-2xl p-8 border border-gray-800">
-          <h2 className="text-xl font-semibold text-white mb-6">ログイン</h2>
+          <h2 className="text-xl font-semibold text-white mb-6">{t('login')}</h2>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm text-gray-400 mb-1">メールアドレス</label>
+              <label className="block text-sm text-gray-400 mb-1">{t('email')}</label>
               <input
                 type="email"
                 value={email}
@@ -50,7 +57,7 @@ const LoginPage = () => {
               />
             </div>
             <div>
-              <label className="block text-sm text-gray-400 mb-1">パスワード</label>
+              <label className="block text-sm text-gray-400 mb-1">{t('password')}</label>
               <input
                 type="password"
                 value={password}
@@ -63,7 +70,7 @@ const LoginPage = () => {
 
             <div className="text-right">
             <Link to="/forgot-password" className="text-blue-400 hover:text-blue-300 text-sm">
-            パスワードをお忘れの方
+            {t('forgotPasswordLink')}
           </Link>
             </div>
             {error && (
@@ -76,15 +83,26 @@ const LoginPage = () => {
               disabled={loading}
               className="w-full bg-white text-gray-950 font-semibold py-3 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? 'ログイン中...' : 'ログイン'}
+              {loading ? t('loggingIn') : t('login')}
             </button>
           </form>
         </div>
 
         <p className="text-center text-gray-500 mt-6 text-sm">
-          アカウントをお持ちでない方は{' '}
+          {t('noAccount')}{' '}
           <Link to="/register" className="text-blue-400 hover:text-blue-300">
-            新規登録
+            {t('register')}
+          </Link>
+        </p>
+        <p className="text-center text-gray-600 mt-4 text-xs flex justify-center gap-4">
+          <Link to="/contact" className="hover:text-gray-300 transition-colors">
+            {t('contact')}
+          </Link>
+          <Link to="/terms" className="hover:text-gray-300 transition-colors">
+            {t('terms')}
+          </Link>
+          <Link to="/privacy" className="hover:text-gray-300 transition-colors">
+            {t('privacy')}
           </Link>
         </p>
       </div>

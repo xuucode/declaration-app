@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import api from '../utils/api.js';
 import ShareButton from './ShareButton.js';
+import { useLanguage } from '../i18n.js';
 
 interface Expense {
   declarationId: string;
@@ -22,6 +23,7 @@ interface ExpenseCardProps {
 }
 
 const ExpenseCard = ({ expense, onUpdate }: ExpenseCardProps) => {
+  const { language, t } = useLanguage();
   const [loading, setLoading] = useState(false);
   const [amount, setAmount] = useState('');
   const [memo, setMemo] = useState('');
@@ -55,7 +57,7 @@ const ExpenseCard = ({ expense, onUpdate }: ExpenseCardProps) => {
       onUpdate();
     } catch (err) {
       const message = (err as { response?: { data?: { message?: string } } }).response?.data?.message;
-      setError(message ?? '記録に失敗しました');
+      setError(message ?? t('recordFailed'));
     } finally {
       setLoading(false);
     }
@@ -63,12 +65,12 @@ const ExpenseCard = ({ expense, onUpdate }: ExpenseCardProps) => {
 
   const handleDelete = async () => {
     const confirmed = window.confirm(
-      `⚠️ 本当に「${expense.title}」を削除しますか？\n\nこの操作は取り消せません。これまでの支出記録も全て失われます。`
+      `${t('deleteHabitConfirmPrefix')}${expense.title}${t('deleteExpenseConfirmSuffix')}`
     );
     if (!confirmed) return;
 
     const doubleConfirmed = window.confirm(
-      `最終確認です。\n「${expense.title}」を完全に削除します。\n本当によろしいですか？`
+      `${t('deleteFinalPrefix')}${expense.title}${t('deleteFinalSuffix')}`
     );
     if (!doubleConfirmed) return;
 
@@ -77,7 +79,7 @@ const ExpenseCard = ({ expense, onUpdate }: ExpenseCardProps) => {
       onUpdate();
     } catch (err) {
       const message = (err as { response?: { data?: { message?: string } } }).response?.data?.message;
-      setError(message ?? '削除に失敗しました');
+      setError(message ?? t('deleteFailed'));
     }
   };
 
@@ -96,7 +98,7 @@ const ExpenseCard = ({ expense, onUpdate }: ExpenseCardProps) => {
       onUpdate();
     } catch (err) {
       const message = (err as { response?: { data?: { message?: string } } }).response?.data?.message;
-      setError(message ?? '更新に失敗しました');
+      setError(message ?? t('updateFailed'));
     } finally {
       setLoading(false);
     }
@@ -112,19 +114,19 @@ const ExpenseCard = ({ expense, onUpdate }: ExpenseCardProps) => {
               ? 'bg-red-900/30 text-red-400 border-red-800'
               : 'bg-green-900/30 text-green-400 border-green-800'
           }`}>
-            {isOver ? '❌ 超過' : '✅ 範囲内'}
+            {isOver ? t('overBudget') : t('withinBudget')}
           </span>
           <button
             onClick={() => setShowEdit(!showEdit)}
             className="text-gray-500 hover:text-gray-300 text-xs px-2 py-1 rounded transition-colors"
           >
-            編集
+            {t('edit')}
           </button>
           <button
             onClick={handleDelete}
             className="text-red-700 hover:text-red-500 text-xs px-2 py-1 rounded transition-colors"
           >
-            削除
+            {t('delete')}
           </button>
         </div>
       </div>
@@ -137,7 +139,7 @@ const ExpenseCard = ({ expense, onUpdate }: ExpenseCardProps) => {
       {showEdit && (
         <form onSubmit={handleUpdate} className="space-y-3 mb-4">
           <div>
-            <label className="block text-sm text-gray-400 mb-1">カテゴリ名</label>
+            <label className="block text-sm text-gray-400 mb-1">{t('categoryName')}</label>
             <input
               type="text"
               value={editTitle}
@@ -147,7 +149,7 @@ const ExpenseCard = ({ expense, onUpdate }: ExpenseCardProps) => {
             />
           </div>
           <div>
-            <label className="block text-sm text-gray-400 mb-1">詳細</label>
+            <label className="block text-sm text-gray-400 mb-1">{t('detailsOptional')}</label>
             <input
               type="text"
               value={editDescription}
@@ -156,7 +158,7 @@ const ExpenseCard = ({ expense, onUpdate }: ExpenseCardProps) => {
             />
           </div>
           <div>
-            <label className="block text-sm text-gray-400 mb-1">上限金額（円）</label>
+            <label className="block text-sm text-gray-400 mb-1">{t('limitAmountYen')}</label>
             <input
               type="number"
               value={editLimitAmount}
@@ -172,14 +174,14 @@ const ExpenseCard = ({ expense, onUpdate }: ExpenseCardProps) => {
               disabled={loading}
               className="flex-1 py-2 bg-white text-gray-950 font-semibold rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50"
             >
-              保存
+              {t('save')}
             </button>
             <button
               type="button"
               onClick={() => setShowEdit(false)}
               className="flex-1 py-2 bg-gray-800 text-gray-300 rounded-lg hover:bg-gray-700 transition-colors"
             >
-              キャンセル
+              {t('cancel')}
             </button>
           </div>
         </form>
@@ -188,7 +190,7 @@ const ExpenseCard = ({ expense, onUpdate }: ExpenseCardProps) => {
       {!showEdit && (
         <>
           <p className="text-gray-500 text-xs mb-3">
-            期間：{expense.periodStart} 〜 {expense.periodEnd}
+            {t('period')}：{expense.periodStart} 〜 {expense.periodEnd}
           </p>
 
           {/* 進捗バー */}
@@ -198,7 +200,7 @@ const ExpenseCard = ({ expense, onUpdate }: ExpenseCardProps) => {
                 ¥{expense.totalAmount.toLocaleString()} / ¥{expense.limitAmount.toLocaleString()}
               </span>
               <span className={isOver ? 'text-red-400' : 'text-gray-400'}>
-                {isOver ? `¥${Math.abs(remaining).toLocaleString()} 超過` : `残り ¥${remaining.toLocaleString()}`}
+                {isOver ? `¥${Math.abs(remaining).toLocaleString()} ${t('over')}` : `${t('remaining')} ¥${remaining.toLocaleString()}`}
               </span>
             </div>
             <div className="w-full bg-gray-800 rounded-full h-2">
@@ -213,11 +215,14 @@ const ExpenseCard = ({ expense, onUpdate }: ExpenseCardProps) => {
           {requiresShare && (
             <div className="bg-red-900/20 border border-red-800 rounded-lg p-4 mb-4">
               <p className="text-red-400 text-sm font-semibold mb-3">
-                「{expense.title}」が予算を超過して期間が終了しました。Xでシェアしてください。
+                「{expense.title}」{t('expenseOverShareSuffix')}
               </p>
               <ShareButton
                 declarationId={expense.declarationId}
-                title={`${expense.title}の予算¥${expense.limitAmount.toLocaleString()}を¥${expense.totalAmount.toLocaleString()}で超過しました`}
+                title={language === 'ja'
+                  ? `${expense.title}の予算¥${expense.limitAmount.toLocaleString()}を¥${expense.totalAmount.toLocaleString()}で超過しました`
+                  : `${expense.title} exceeded its ¥${expense.limitAmount.toLocaleString()} budget with ¥${expense.totalAmount.toLocaleString()} spent`
+                }
                 type="failed"
                 onShare={async () => {
                 await api.patch(`/expenses/${expense.declarationId}/shared`, {});
@@ -231,7 +236,7 @@ const ExpenseCard = ({ expense, onUpdate }: ExpenseCardProps) => {
           {showForm ? (
             <form onSubmit={handleAddLog} className="space-y-3">
               <div>
-                <label className="block text-sm text-gray-400 mb-1">金額（円）</label>
+                <label className="block text-sm text-gray-400 mb-1">{t('amountYen')}</label>
                 <input
                   type="number"
                   value={amount}
@@ -243,13 +248,13 @@ const ExpenseCard = ({ expense, onUpdate }: ExpenseCardProps) => {
                 />
               </div>
               <div>
-                <label className="block text-sm text-gray-400 mb-1">メモ（任意）</label>
+                <label className="block text-sm text-gray-400 mb-1">{t('memoOptional')}</label>
                 <input
                   type="text"
                   value={memo}
                   onChange={(e) => setMemo(e.target.value)}
                   className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500"
-                  placeholder="映画チケット"
+                  placeholder={t('memoPlaceholder')}
                 />
               </div>
               {error && <p className="text-red-400 text-sm">{error}</p>}
@@ -259,14 +264,14 @@ const ExpenseCard = ({ expense, onUpdate }: ExpenseCardProps) => {
                   disabled={loading}
                   className="flex-1 py-2 bg-white text-gray-950 font-semibold rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50"
                 >
-                  記録する
+                  {t('record')}
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowForm(false)}
                   className="flex-1 py-2 bg-gray-800 text-gray-300 rounded-lg hover:bg-gray-700 transition-colors"
                 >
-                  キャンセル
+                  {t('cancel')}
                 </button>
               </div>
             </form>
@@ -275,7 +280,7 @@ const ExpenseCard = ({ expense, onUpdate }: ExpenseCardProps) => {
               onClick={() => setShowForm(true)}
               className="w-full py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg text-sm font-semibold transition-colors"
             >
-              ＋ 支出を追加
+              {t('addExpense')}
             </button>
           )}
         </>
