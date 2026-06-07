@@ -9,7 +9,8 @@ import {
 } from '../controllers/expenseController.js';
 import { authMiddleware } from '../middleware/auth.js';
 import { docClient, TABLES } from '../config/dynamodb.js';
-import { UpdateCommand } from '@aws-sdk/lib-dynamodb';
+import { GetCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
+import { AuthRequest } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -20,8 +21,22 @@ router.get('/:id/logs', authMiddleware, getExpenseLogs);
 router.delete('/:id', authMiddleware, deleteExpense);
 router.patch('/:id', authMiddleware, updateExpense);
 router.patch('/:id/shared', authMiddleware, async (req, res) => {
+  const authReq = req as AuthRequest;
   const id = req.params['id'] as string;
   try {
+    const expenseResult = await docClient.send(
+      new GetCommand({
+        TableName: TABLES.DECLARATIONS,
+        Key: { declarationId: id },
+      })
+    );
+    const expense = expenseResult.Item;
+    if (!expense || expense.userId !== authReq.userId || expense.type !== 'expense') {
+      res.status(404).json({ message: '支出管理が見つかりません' });
+      return;
+    }
+
+    const alreadyShared = Boolean(expense.sharedAt);
     await docClient.send(
       new UpdateCommand({
         TableName: TABLES.DECLARATIONS,
@@ -32,6 +47,21 @@ router.patch('/:id/shared', authMiddleware, async (req, res) => {
         },
       })
     );
+
+    if (!alreadyShared) {
+      await docClient.send(
+        new UpdateCommand({
+          TableName: TABLES.USERS,
+          Key: { userId: authReq.userId },
+          UpdateExpression: 'SET lastSharedAt = :lastSharedAt ADD shareStreakCount :inc',
+          ExpressionAttributeValues: {
+            ':lastSharedAt': new Date().toISOString(),
+            ':inc': 1,
+          },
+        })
+      );
+    }
+
     res.status(200).json({ message: 'シェア完了を記録しました' });
   } catch (e: any) {
     res.status(500).json({ message: e.message });

@@ -8,6 +8,33 @@ import { OgpType } from '../ogp/generateOgp.js';
 import { hasPremiumAccess } from '../utils/subscription.js';
 import { FREE_LIMITS, isItemLockedForFreePlan, markLockedItems } from '../utils/premiumLimits.js';
 
+const resetShareStreak = async (userId: string): Promise<void> => {
+  await docClient.send(
+    new UpdateCommand({
+      TableName: TABLES.USERS,
+      Key: { userId },
+      UpdateExpression: 'SET shareStreakCount = :zero',
+      ExpressionAttributeValues: {
+        ':zero': 0,
+      },
+    })
+  );
+};
+
+const incrementShareStreak = async (userId: string): Promise<void> => {
+  await docClient.send(
+    new UpdateCommand({
+      TableName: TABLES.USERS,
+      Key: { userId },
+      UpdateExpression: 'SET lastSharedAt = :lastSharedAt ADD shareStreakCount :inc',
+      ExpressionAttributeValues: {
+        ':inc': 1,
+        ':lastSharedAt': new Date().toISOString(),
+      },
+    })
+  );
+};
+
 // 宣言一覧取得
 export const getDeclarations = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
@@ -56,6 +83,31 @@ export const createDeclaration = async (req: AuthRequest, res: Response): Promis
   }
 
   try {
+    const unsharedFailedResult = await docClient.send(
+      new QueryCommand({
+        TableName: TABLES.DECLARATIONS,
+        IndexName: 'userId-createdAt-index',
+        KeyConditionExpression: 'userId = :userId',
+        FilterExpression: '(#type = :type OR attribute_not_exists(#type)) AND #status = :failed AND (attribute_not_exists(#sharedAt) OR #sharedAt = :empty)',
+        ExpressionAttributeNames: {
+          '#type': 'type',
+          '#status': 'status',
+          '#sharedAt': 'sharedAt',
+        },
+        ExpressionAttributeValues: {
+          ':userId': req.userId,
+          ':type': 'task',
+          ':failed': 'failed',
+          ':empty': '',
+        },
+      })
+    );
+
+    if ((unsharedFailedResult.Items?.length ?? 0) > 0) {
+      res.status(403).json({ message: '未達成の宣言をシェアしてから新しい宣言を作成してください。' });
+      return;
+    }
+
     // 無料プランの制約チェック
     const userResult = await docClient.send(
       new GetCommand({
@@ -150,7 +202,48 @@ export const getDeclaration = async (req: Request, res: Response): Promise<void>
       return;
     }
 
-    res.status(200).json(result.Item);
+    const declaration = result.Item;
+    const userResult = await docClient.send(
+      new GetCommand({
+        TableName: TABLES.USERS,
+        Key: { userId: declaration.userId },
+      })
+    );
+
+    const type = declaration.type ?? 'task';
+    let publicStats = {};
+
+    if (type === 'habit') {
+      const logsResult = await docClient.send(
+        new QueryCommand({
+          TableName: TABLES.DAILY_LOGS,
+          KeyConditionExpression: 'habitId = :habitId',
+          ExpressionAttributeValues: { ':habitId': declaration.declarationId },
+        })
+      );
+      const logs = logsResult.Items ?? [];
+      publicStats = {
+        kind: 'habit',
+        streakCount: declaration.streakCount ?? 0,
+        achievedCount: logs.filter((log) => log.result === 'achieved').length,
+        totalCount: logs.length,
+        lastUpdatedAt: logs[0]?.createdAt ?? declaration.createdAt,
+      };
+    } else {
+      publicStats = {
+        kind: 'task',
+        deadline: declaration.deadline,
+        status: declaration.status,
+        reportedAt: declaration.reportedAt,
+      };
+    }
+
+    res.status(200).json({
+      ...declaration,
+      displayName: userResult.Item?.displayName ?? '',
+      shareStreakCount: userResult.Item?.shareStreakCount ?? 0,
+      publicStats,
+    });
   } catch (e: any) {
     res.status(500).json({ message: e.message });
   }
@@ -227,6 +320,9 @@ export const updateDeclarationStatus = async (req: AuthRequest, res: Response): 
         },
       })
     );
+
+    await resetShareStreak(req.userId as string);
+
     // streakCountの更新
     if (status === 'done') {
   // その日の全タスクが達成済みかチェック
@@ -314,6 +410,25 @@ export const markAsShared = async (req: AuthRequest, res: Response): Promise<voi
   const id = req.params['id'] as string;
 
   try {
+    const declarationResult = await docClient.send(
+      new GetCommand({
+        TableName: TABLES.DECLARATIONS,
+        Key: { declarationId: id },
+      })
+    );
+    const declaration = declarationResult.Item;
+    if (!declaration || declaration.userId !== req.userId) {
+      res.status(404).json({ message: '宣言が見つかりません' });
+      return;
+    }
+
+    if ((declaration.type ?? 'task') === 'task' && !['done', 'failed'].includes(declaration.status)) {
+      res.status(400).json({ message: '結果共有は達成または未達成のタスクのみ記録できます' });
+      return;
+    }
+
+    const alreadyShared = Boolean(declaration.sharedAt);
+    const completesPublicCommitment = Boolean(declaration.publicSharedAt) && !alreadyShared;
     await docClient.send(
       new UpdateCommand({
         TableName: TABLES.DECLARATIONS,
@@ -325,7 +440,52 @@ export const markAsShared = async (req: AuthRequest, res: Response): Promise<voi
       })
     );
 
+    if (completesPublicCommitment) {
+      await incrementShareStreak(req.userId as string);
+    } else if (!declaration.publicSharedAt) {
+      await resetShareStreak(req.userId as string);
+    }
+
     res.status(200).json({ message: 'シェア完了を記録しました' });
+  } catch (e: any) {
+    res.status(500).json({ message: e.message });
+  }
+};
+
+// 公開宣言としてX共有した記録
+export const markAsPublicShared = async (req: AuthRequest, res: Response): Promise<void> => {
+  const id = req.params['id'] as string;
+
+  try {
+    const declarationResult = await docClient.send(
+      new GetCommand({
+        TableName: TABLES.DECLARATIONS,
+        Key: { declarationId: id },
+      })
+    );
+    const declaration = declarationResult.Item;
+    if (!declaration || declaration.userId !== req.userId) {
+      res.status(404).json({ message: '宣言が見つかりません' });
+      return;
+    }
+
+    if ((declaration.type ?? 'task') !== 'task' || declaration.status !== 'pending') {
+      res.status(400).json({ message: '公開宣言は進行中のタスクのみ記録できます' });
+      return;
+    }
+
+    await docClient.send(
+      new UpdateCommand({
+        TableName: TABLES.DECLARATIONS,
+        Key: { declarationId: id },
+        UpdateExpression: 'SET publicSharedAt = :publicSharedAt',
+        ExpressionAttributeValues: {
+          ':publicSharedAt': new Date().toISOString(),
+        },
+      })
+    );
+
+    res.status(200).json({ message: '公開宣言を記録しました' });
   } catch (e: any) {
     res.status(500).json({ message: e.message });
   }

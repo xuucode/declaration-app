@@ -4,11 +4,14 @@ import { createCheckoutSession } from '../utils/api.js';
 import ShareButton from './ShareButton.js';
 import { useLanguage } from '../i18n.js';
 
+type Currency = 'JPY' | 'USD';
+
 interface Expense {
   declarationId: string;
   title: string;
   description: string;
   limitAmount: number;
+  currency?: Currency;
   period: string;
   periodStart: string;
   periodEnd: string;
@@ -24,6 +27,15 @@ interface ExpenseCardProps {
   onUpdate: () => void;
 }
 
+interface ExpenseLog {
+  expenseId: string;
+  date: string;
+  amount: number;
+  currency?: Currency;
+  memo?: string;
+  createdAt: string;
+}
+
 const ExpenseCard = ({ expense, onUpdate }: ExpenseCardProps) => {
   const { language, t } = useLanguage();
   const [loading, setLoading] = useState(false);
@@ -31,10 +43,15 @@ const ExpenseCard = ({ expense, onUpdate }: ExpenseCardProps) => {
   const [memo, setMemo] = useState('');
   const [error, setError] = useState('');
   const [showForm, setShowForm] = useState(false);
-  const [showEdit, setShowEdit] = useState(false);
-  const [editTitle, setEditTitle] = useState(expense.title);
-  const [editDescription, setEditDescription] = useState(expense.description);
-  const [editLimitAmount, setEditLimitAmount] = useState(expense.limitAmount.toString());
+  const [showLogs, setShowLogs] = useState(false);
+  const [logs, setLogs] = useState<ExpenseLog[]>([]);
+  const [logsLoading, setLogsLoading] = useState(false);
+  const currency = expense.currency ?? 'JPY';
+  const formatAmount = (value: number, targetCurrency: Currency = currency) => new Intl.NumberFormat(language === 'ja' ? 'ja-JP' : 'en-US', {
+    style: 'currency',
+    currency: targetCurrency,
+    maximumFractionDigits: targetCurrency === 'JPY' ? 0 : 2,
+  }).format(value);
 
   const remaining = expense.limitAmount - expense.totalAmount;
   const percentage = Math.min(Math.round((expense.totalAmount / expense.limitAmount) * 100), 100);
@@ -60,6 +77,7 @@ const ExpenseCard = ({ expense, onUpdate }: ExpenseCardProps) => {
     try {
       await api.post(`/expenses/${expense.declarationId}/log`, {
         amount: Number(amount),
+        currency,
         memo,
       });
       setAmount('');
@@ -71,6 +89,27 @@ const ExpenseCard = ({ expense, onUpdate }: ExpenseCardProps) => {
       setError(message ?? t('recordFailed'));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleToggleLogs = async () => {
+    if (showLogs) {
+      setShowLogs(false);
+      return;
+    }
+
+    setLogsLoading(true);
+    setError('');
+
+    try {
+      const res = await api.get(`/expenses/${expense.declarationId}/logs`);
+      setLogs(res.data);
+      setShowLogs(true);
+    } catch (err) {
+      const message = (err as { response?: { data?: { message?: string } } }).response?.data?.message;
+      setError(message ?? t('expenseLogsFetchFailed'));
+    } finally {
+      setLogsLoading(false);
     }
   };
 
@@ -94,27 +133,6 @@ const ExpenseCard = ({ expense, onUpdate }: ExpenseCardProps) => {
     }
   };
 
-  const handleUpdate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-
-    try {
-      await api.patch(`/expenses/${expense.declarationId}`, {
-        title: editTitle,
-        description: editDescription,
-        limitAmount: Number(editLimitAmount),
-      });
-      setShowEdit(false);
-      onUpdate();
-    } catch (err) {
-      const message = (err as { response?: { data?: { message?: string } } }).response?.data?.message;
-      setError(message ?? t('updateFailed'));
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <div className={`bg-gray-900 border rounded-xl p-5 mb-4 ${expense.isLocked ? 'border-yellow-700/60' : 'border-gray-800'}`}>
       <div className="flex justify-between items-start mb-3">
@@ -133,11 +151,11 @@ const ExpenseCard = ({ expense, onUpdate }: ExpenseCardProps) => {
             {isOver ? t('overBudget') : t('withinBudget')}
           </span>
           <button
-            onClick={() => setShowEdit(!showEdit)}
+            onClick={handleToggleLogs}
             disabled={expense.isLocked}
             className="text-gray-500 hover:text-gray-300 text-xs px-2 py-1 rounded transition-colors"
           >
-            {t('edit')}
+            {logsLoading ? t('loading') : t('viewExpenses')}
           </button>
           <button
             onClick={handleDelete}
@@ -148,7 +166,7 @@ const ExpenseCard = ({ expense, onUpdate }: ExpenseCardProps) => {
         </div>
       </div>
 
-      {expense.description && !showEdit && (
+      {expense.description && (
         <p className="text-gray-400 text-sm mb-3">{expense.description}</p>
       )}
 
@@ -166,59 +184,7 @@ const ExpenseCard = ({ expense, onUpdate }: ExpenseCardProps) => {
         </div>
       )}
 
-      {/* 編集フォーム */}
-      {showEdit && !expense.isLocked && (
-        <form onSubmit={handleUpdate} className="space-y-3 mb-4">
-          <div>
-            <label className="block text-sm text-gray-400 mb-1">{t('categoryName')}</label>
-            <input
-              type="text"
-              value={editTitle}
-              onChange={(e) => setEditTitle(e.target.value)}
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-sm text-gray-400 mb-1">{t('detailsOptional')}</label>
-            <input
-              type="text"
-              value={editDescription}
-              onChange={(e) => setEditDescription(e.target.value)}
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500"
-            />
-          </div>
-          <div>
-            <label className="block text-sm text-gray-400 mb-1">{t('limitAmountYen')}</label>
-            <input
-              type="number"
-              value={editLimitAmount}
-              onChange={(e) => setEditLimitAmount(e.target.value)}
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500"
-              min="1"
-              required
-            />
-          </div>
-          <div className="flex gap-3">
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex-1 py-2 bg-white text-gray-950 font-semibold rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50"
-            >
-              {t('save')}
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowEdit(false)}
-              className="flex-1 py-2 bg-gray-800 text-gray-300 rounded-lg hover:bg-gray-700 transition-colors"
-            >
-              {t('cancel')}
-            </button>
-          </div>
-        </form>
-      )}
-
-      {!showEdit && !expense.isLocked && (
+      {!expense.isLocked && (
         <>
           <p className="text-gray-500 text-xs mb-3">
             {t('period')}：{expense.periodStart} 〜 {expense.periodEnd}
@@ -228,10 +194,10 @@ const ExpenseCard = ({ expense, onUpdate }: ExpenseCardProps) => {
           <div className="mb-4">
             <div className="flex justify-between text-sm mb-1">
               <span className="text-gray-400">
-                ¥{expense.totalAmount.toLocaleString()} / ¥{expense.limitAmount.toLocaleString()}
+                {formatAmount(expense.totalAmount)} / {formatAmount(expense.limitAmount)}
               </span>
               <span className={isOver ? 'text-red-400' : 'text-gray-400'}>
-                {isOver ? `¥${Math.abs(remaining).toLocaleString()} ${t('over')}` : `${t('remaining')} ¥${remaining.toLocaleString()}`}
+                {isOver ? `${formatAmount(Math.abs(remaining))} ${t('over')}` : `${t('remaining')} ${formatAmount(remaining)}`}
               </span>
             </div>
             <div className="w-full bg-gray-800 rounded-full h-2">
@@ -242,6 +208,32 @@ const ExpenseCard = ({ expense, onUpdate }: ExpenseCardProps) => {
             </div>
           </div>
 
+          {showLogs && (
+            <div className="bg-gray-950/60 border border-gray-800 rounded-lg p-4 mb-4">
+              <p className="text-white text-sm font-semibold mb-3">{t('expenseHistory')}</p>
+              {logs.length === 0 ? (
+                <p className="text-gray-500 text-sm">{t('noExpenseLogs')}</p>
+              ) : (
+                <div className="space-y-3">
+                  {logs.map((log) => {
+                    const logCurrency = log.currency ?? currency;
+                    return (
+                      <div key={log.expenseId} className="border-b border-gray-800 pb-3 last:border-b-0 last:pb-0">
+                        <div className="flex justify-between gap-3 text-sm">
+                          <span className="text-gray-400">{log.date}</span>
+                          <span className="text-white font-semibold">{formatAmount(Number(log.amount), logCurrency)}</span>
+                        </div>
+                        {log.memo && (
+                          <p className="text-gray-500 text-sm mt-1 whitespace-pre-wrap">{log.memo}</p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* 超過シェア */}
           {requiresShare && (
             <div className="bg-red-900/20 border border-red-800 rounded-lg p-4 mb-4">
@@ -251,8 +243,8 @@ const ExpenseCard = ({ expense, onUpdate }: ExpenseCardProps) => {
               <ShareButton
                 declarationId={expense.declarationId}
                 title={language === 'ja'
-                  ? `${expense.title}の予算¥${expense.limitAmount.toLocaleString()}を¥${expense.totalAmount.toLocaleString()}で超過しました`
-                  : `${expense.title} exceeded its ¥${expense.limitAmount.toLocaleString()} budget with ¥${expense.totalAmount.toLocaleString()} spent`
+                  ? `${expense.title}の予算${formatAmount(expense.limitAmount)}を${formatAmount(expense.totalAmount)}で超過しました`
+                  : `${expense.title} exceeded its ${formatAmount(expense.limitAmount)} budget with ${formatAmount(expense.totalAmount)} spent`
                 }
                 type="failed"
                 onShare={async () => {
@@ -267,16 +259,18 @@ const ExpenseCard = ({ expense, onUpdate }: ExpenseCardProps) => {
           {showForm ? (
             <form onSubmit={handleAddLog} className="space-y-3">
               <div>
-                <label className="block text-sm text-gray-400 mb-1">{t('amountYen')}</label>
+                <label className="block text-sm text-gray-400 mb-1">{t('amount')}</label>
                 <input
                   type="number"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
                   className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500"
-                  placeholder="1000"
+                  placeholder={currency === 'JPY' ? '1000' : '10'}
                   required
-                  min="1"
+                  min={currency === 'JPY' ? '1' : '0.01'}
+                  step={currency === 'JPY' ? '1' : '0.01'}
                 />
+                <p className="text-gray-500 text-xs mt-1">{t('currencyFixedHelp')} {currency}</p>
               </div>
               <div>
                 <label className="block text-sm text-gray-400 mb-1">{t('memoOptional')}</label>

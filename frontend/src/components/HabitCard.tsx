@@ -12,6 +12,9 @@ interface Habit {
   limitValue: number | null;
   status: string;
   streakCount: number;
+  achievedCount?: number;
+  totalCount?: number;
+  publicSharedAt?: string;
   createdAt: string;
   isLocked?: boolean;
 }
@@ -29,10 +32,9 @@ const HabitCard = ({ habit, onUpdate }: HabitCardProps) => {
   const [logResult, setLogResult] = useState<'achieved' | 'failed' | null>(null);
   const [requiresShare, setRequiresShare] = useState(false);
   const [checkingLog, setCheckingLog] = useState(true);
-  const [showEdit, setShowEdit] = useState(false);
-  const [editTitle, setEditTitle] = useState(habit.title);
-  const [editDescription, setEditDescription] = useState(habit.description);
-  const [editLimitValue, setEditLimitValue] = useState(habit.limitValue?.toString() ?? '');
+  const [todayLogShared, setTodayLogShared] = useState(false);
+  const achievedCount = habit.achievedCount ?? 0;
+  const totalCount = habit.totalCount ?? 0;
 
   useEffect(() => {
     if (habit.isLocked) {
@@ -47,6 +49,7 @@ const HabitCard = ({ habit, onUpdate }: HabitCardProps) => {
         const todayLog = res.data.find((log: { date: string; result: string; autoFailed?: boolean; sharedAt?: string }) => log.date === today);
         if (todayLog) {
           setLogResult(todayLog.result);
+          setTodayLogShared(Boolean(todayLog.sharedAt));
           if (todayLog.result === 'failed' && !todayLog.autoFailed && !todayLog.sharedAt) {
             setRequiresShare(true);
           }
@@ -104,6 +107,7 @@ const HabitCard = ({ habit, onUpdate }: HabitCardProps) => {
         value: value ? Number(value) : null,
       });
       setLogResult(result);
+      setTodayLogShared(false);
       if (result === 'failed') {
         setRequiresShare(true);
       }
@@ -136,33 +140,6 @@ const HabitCard = ({ habit, onUpdate }: HabitCardProps) => {
     }
   };
 
-  const handleUpdate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-
-    if (habit.limitType === 'count' && editLimitValue.trim() === '') {
-      setError(t('maxCountRequired'));
-      setLoading(false);
-      return;
-    }
-
-    try {
-      await api.patch(`/habits/${habit.declarationId}`, {
-        title: editTitle,
-        description: editDescription,
-        limitValue: editLimitValue ? Number(editLimitValue) : null,
-      });
-      setShowEdit(false);
-      onUpdate();
-    } catch (err) {
-      const message = (err as { response?: { data?: { message?: string } } }).response?.data?.message;
-      setError(message ?? t('updateFailed'));
-    } finally {
-      setLoading(false);
-    }
-  };
-
   if (checkingLog) {
     return (
       <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 mb-4">
@@ -175,22 +152,27 @@ const HabitCard = ({ habit, onUpdate }: HabitCardProps) => {
     <div className={`bg-gray-900 border rounded-xl p-5 mb-4 ${habit.isLocked ? 'border-yellow-700/60' : 'border-gray-800'}`}>
       <div className="flex justify-between items-start mb-3">
         <h3 className="text-white font-semibold text-lg flex-1 mr-4">{habit.title}</h3>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap justify-end items-center gap-2">
           {habit.isLocked && (
             <span className="bg-yellow-900/30 text-yellow-300 border border-yellow-700 text-xs px-3 py-1 rounded-full whitespace-nowrap">
               {t('premiumLockedBadge')}
             </span>
           )}
+          {habit.publicSharedAt ? (
+            <span className="bg-blue-900/30 text-blue-300 border border-blue-800 text-xs px-3 py-1 rounded-full whitespace-nowrap">
+              {t('publicCommitmentBadge')}
+            </span>
+          ) : (
+            <span className="bg-gray-800 text-gray-500 border border-gray-700 text-xs px-3 py-1 rounded-full whitespace-nowrap">
+              {t('privateCommitmentBadge')}
+            </span>
+          )}
           <span className="text-orange-400 font-bold text-sm whitespace-nowrap">
             🔥 {habit.streakCount}
           </span>
-          <button
-            onClick={() => setShowEdit(!showEdit)}
-            disabled={habit.isLocked}
-            className="text-gray-500 hover:text-gray-300 text-xs px-2 py-1 rounded transition-colors"
-          >
-            {t('edit')}
-          </button>
+          <span className="text-blue-300 font-bold text-sm whitespace-nowrap">
+            {achievedCount}/{totalCount}
+          </span>
           <button
             onClick={handleDelete}
             className="text-red-700 hover:text-red-500 text-xs px-2 py-1 rounded transition-colors"
@@ -200,11 +182,11 @@ const HabitCard = ({ habit, onUpdate }: HabitCardProps) => {
         </div>
       </div>
 
-      {habit.description && !showEdit && (
+      {habit.description && (
         <p className="text-gray-400 text-sm mb-3">{habit.description}</p>
       )}
 
-      {habit.limitType === 'count' && habit.limitValue && !showEdit && (
+      {habit.limitType === 'count' && habit.limitValue && (
         <p className="text-gray-500 text-xs mb-4">
           {t('goalCount')}：{habit.limitValue}{t('timesOrLess')}
         </p>
@@ -224,60 +206,6 @@ const HabitCard = ({ habit, onUpdate }: HabitCardProps) => {
         </div>
       )}
 
-      {/* 編集フォーム */}
-      {showEdit && !habit.isLocked && (
-        <form onSubmit={handleUpdate} className="space-y-3 mb-4">
-          <div>
-            <label className="block text-sm text-gray-400 mb-1">{t('habitName')}</label>
-            <input
-              type="text"
-              value={editTitle}
-              onChange={(e) => setEditTitle(e.target.value)}
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-sm text-gray-400 mb-1">{t('detailsOptional')}</label>
-            <input
-              type="text"
-              value={editDescription}
-              onChange={(e) => setEditDescription(e.target.value)}
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500"
-            />
-          </div>
-          {habit.limitType === 'count' && (
-            <div>
-              <label className="block text-sm text-gray-400 mb-1">{t('maxCount')}</label>
-              <input
-                type="number"
-                value={editLimitValue}
-                onChange={(e) => setEditLimitValue(e.target.value)}
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500"
-                min="1"
-                required
-              />
-            </div>
-          )}
-          <div className="flex gap-3">
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex-1 py-2 bg-white text-gray-950 font-semibold rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50"
-            >
-              {t('save')}
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowEdit(false)}
-              className="flex-1 py-2 bg-gray-800 text-gray-300 rounded-lg hover:bg-gray-700 transition-colors"
-            >
-              {t('cancel')}
-            </button>
-          </div>
-        </form>
-      )}
-
       {requiresShare && !habit.isLocked ? (
         <div className="bg-red-900/20 border border-red-800 rounded-lg p-4">
           <p className="text-red-400 text-sm font-semibold mb-3">
@@ -291,6 +219,7 @@ const HabitCard = ({ habit, onUpdate }: HabitCardProps) => {
               try {
                 await api.patch(`/habits/${habit.declarationId}/log/shared`, {});
                 setRequiresShare(false);
+                setTodayLogShared(true);
                 onUpdate();
               } catch (err) {
                 const message = (err as { response?: { data?: { message?: string } } }).response?.data?.message;
@@ -300,10 +229,30 @@ const HabitCard = ({ habit, onUpdate }: HabitCardProps) => {
           />
         </div>
       ) : logResult === 'achieved' && !habit.isLocked ? (
-        <div className="bg-green-900/20 border border-green-800 rounded-lg px-4 py-3">
-          <p className="text-green-400 text-sm font-semibold">
-            {t('achievedHabitTodayPrefix')}{habit.title}{t('achievedHabitTodaySuffix')}
-          </p>
+        <div className="space-y-3">
+          <div className="bg-green-900/20 border border-green-800 rounded-lg px-4 py-3">
+            <p className="text-green-400 text-sm font-semibold">
+              {t('achievedHabitTodayPrefix')}{habit.title}{t('achievedHabitTodaySuffix')}
+            </p>
+          </div>
+          {!todayLogShared && (
+            <ShareButton
+              declarationId={habit.declarationId}
+              title={habit.title}
+              type="progress"
+              detail={`${t('habitProgressDetailPrefix')}${habit.streakCount}${t('habitProgressDetailMiddle')}${achievedCount}/${totalCount}`}
+              onShare={async () => {
+                await api.patch(`/habits/${habit.declarationId}/log/shared`, {});
+                setTodayLogShared(true);
+                onUpdate();
+              }}
+            />
+          )}
+          {todayLogShared && (
+            <div className="bg-blue-900/20 border border-blue-800 rounded-lg px-4 py-3">
+              <p className="text-blue-300 text-sm font-semibold">{t('habitSharedToday')}</p>
+            </div>
+          )}
         </div>
       ) : logResult === 'failed' && !habit.isLocked ? (
         <div className="bg-red-900/20 border border-red-800 rounded-lg px-4 py-3">
@@ -311,7 +260,7 @@ const HabitCard = ({ habit, onUpdate }: HabitCardProps) => {
             {t('failedHabitTodayPrefix')}{habit.title}{t('failedHabitTodaySuffix')}
           </p>
         </div>
-      ) : !showEdit && !habit.isLocked && (
+      ) : !habit.isLocked && (
         <div className="space-y-3">
           {habit.limitType === 'count' && (
             <div>

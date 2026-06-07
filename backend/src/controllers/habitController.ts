@@ -46,7 +46,26 @@ export const getHabits = async (req: AuthRequest, res: Response): Promise<void> 
       isPremium
     );
 
-    res.status(200).json(items);
+    const itemsWithCounts = await Promise.all(
+      items.map(async (item) => {
+        const logsResult = await docClient.send(
+          new QueryCommand({
+            TableName: TABLES.DAILY_LOGS,
+            KeyConditionExpression: 'habitId = :habitId',
+            ExpressionAttributeValues: { ':habitId': item.declarationId },
+          })
+        );
+        const logs = logsResult.Items ?? [];
+
+        return {
+          ...item,
+          achievedCount: logs.filter((log) => log.result === 'achieved').length,
+          totalCount: logs.length,
+        };
+      })
+    );
+
+    res.status(200).json(itemsWithCounts);
   } catch (e: any) {
     res.status(500).json({ message: e.message });
   }
@@ -305,15 +324,25 @@ export const markHabitLogAsShared = async (req: AuthRequest, res: Response): Pro
           date: today,
         },
         UpdateExpression: 'SET sharedAt = :sharedAt',
-        ConditionExpression: '#userId = :userId AND #result = :result',
+        ConditionExpression: '#userId = :userId AND attribute_not_exists(sharedAt)',
         ExpressionAttributeNames: {
           '#userId': 'userId',
-          '#result': 'result',
         },
         ExpressionAttributeValues: {
           ':sharedAt': new Date().toISOString(),
           ':userId': req.userId,
-          ':result': 'failed',
+        },
+      })
+    );
+
+    await docClient.send(
+      new UpdateCommand({
+        TableName: TABLES.USERS,
+        Key: { userId: req.userId },
+        UpdateExpression: 'SET lastSharedAt = :lastSharedAt ADD shareStreakCount :inc',
+        ExpressionAttributeValues: {
+          ':lastSharedAt': new Date().toISOString(),
+          ':inc': 1,
         },
       })
     );
@@ -321,7 +350,7 @@ export const markHabitLogAsShared = async (req: AuthRequest, res: Response): Pro
     res.status(200).json({ message: 'シェア完了を記録しました' });
   } catch (e: any) {
     if (e.name === 'ConditionalCheckFailedException') {
-      res.status(404).json({ message: '未達成ログが見つかりません' });
+      res.status(409).json({ message: '共有済み、または今日の習慣ログが見つかりません' });
       return;
     }
 

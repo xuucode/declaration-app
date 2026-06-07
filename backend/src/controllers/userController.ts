@@ -125,10 +125,10 @@ export const getCalendarSummary = async (req: AuthRequest, res: Response): Promi
     );
 
     const declarations = declarationsResult.Items ?? [];
-    const days: Record<string, { achieved: number; total: number; expenseAmount: number }> = {};
+    const days: Record<string, { achieved: number; total: number; expenseAmounts: Record<'JPY' | 'USD', number> }> = {};
     const ensureDay = (date: string) => {
       if (!days[date]) {
-        days[date] = { achieved: 0, total: 0, expenseAmount: 0 };
+        days[date] = { achieved: 0, total: 0, expenseAmounts: { JPY: 0, USD: 0 } };
       }
       return days[date];
     };
@@ -189,20 +189,22 @@ export const getCalendarSummary = async (req: AuthRequest, res: Response): Promi
       for (const log of logsResult.Items ?? []) {
         const date = String(log.date);
         const amount = Number(log.amount);
-        ensureDay(date).expenseAmount += Number.isFinite(amount) ? amount : 0;
+        const currency = (log.currency ?? expense.currency ?? 'JPY') === 'USD' ? 'USD' : 'JPY';
+        ensureDay(date).expenseAmounts[currency] += Number.isFinite(amount) ? amount : 0;
       }
     }
 
     const dayCount = Number(monthEndKey.slice(8, 10));
     const calendarDays = Array.from({ length: dayCount }, (_, index) => {
       const date = `${month}-${String(index + 1).padStart(2, '0')}`;
-      const day = days[date] ?? { achieved: 0, total: 0, expenseAmount: 0 };
+      const day = days[date] ?? { achieved: 0, total: 0, expenseAmounts: { JPY: 0, USD: 0 } };
       return {
         date,
         achievementRate: day.total > 0 ? Math.round((day.achieved / day.total) * 100) : null,
         achieved: day.achieved,
         total: day.total,
-        expenseAmount: day.expenseAmount,
+        expenseAmount: day.expenseAmounts.JPY,
+        expenseAmounts: day.expenseAmounts,
       };
     });
 

@@ -44,6 +44,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
           email,
           displayName,
           streakCount: 0,
+          shareStreakCount: 0,
           createdAt: new Date().toISOString(),
         },
       })

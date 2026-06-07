@@ -22,7 +22,7 @@ const Navigation = () => {
 
   return (
     <header className="app-header border-b border-gray-800 px-4 py-3 bg-gray-950 sticky top-0 z-10">
-      <div className="max-w-2xl mx-auto flex justify-between items-start gap-4">
+      <div className="max-w-2xl mx-auto flex justify-between items-center gap-4">
         <button
           onClick={() => navigate('/mypage')}
           className="nav-brand"
@@ -30,14 +30,14 @@ const Navigation = () => {
         >
           <img src={structHomeLogo} alt="Struct" className="h-24 w-auto max-w-[340px]" />
         </button>
-        <div className="flex items-center gap-3 pt-1">
-          <div className="hidden sm:block">
+        <div className="flex items-center gap-3">
+          <div className="hidden md:block">
             <LanguageToggle />
           </div>
           {/* ハンバーガーメニュー */}
           <button
             onClick={() => setMenuOpen(!menuOpen)}
-            className="nav-menu-button md:hidden text-gray-400 hover:text-white p-2"
+            className="nav-menu-button md:hidden text-gray-400 hover:text-white p-2 mr-2"
             aria-label={menuOpen ? 'Close menu' : 'Open menu'}
             aria-expanded={menuOpen}
           >

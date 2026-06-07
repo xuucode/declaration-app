@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import api from '../utils/api.js';
 import { useAuth } from '../hooks/useAuth.js';
 import Navigation from '../components/Navigation.js';
@@ -139,15 +139,13 @@ const ProfilePage = () => {
         <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 mb-6">
           <h3 className="text-white font-semibold mb-3">{t('plan')}</h3>
           {user?.subscriptionStatus === 'active' ? (
-            <div className="space-y-4">
-              <div className="flex items-center gap-3">
-                <span className="bg-yellow-500/20 text-yellow-400 border border-yellow-600 text-sm px-3 py-1 rounded-full font-semibold">
+            <div className="flex items-start gap-2 min-w-0">
+                <span className="shrink-0 bg-yellow-500/20 text-yellow-400 border border-yellow-600 text-[11px] sm:text-sm px-2.5 sm:px-3 py-1 rounded-full font-semibold whitespace-nowrap">
                   ⭐ Premium
                 </span>
-                <p className="text-gray-400 text-sm">
+                <p className="min-w-0 flex-1 text-gray-400 text-[10px] sm:text-sm leading-relaxed">
                   {cancelScheduled ? t('premiumCancelScheduled') : t('premiumActive')}
                 </p>
-              </div>
             </div>
           ) : (
             <div>
@@ -311,6 +309,21 @@ const ProfilePage = () => {
         >
           {t('logout')}
         </button>
+
+        <p className="app-footer-links text-center text-gray-600 mt-10 text-[10px] sm:text-xs flex justify-center gap-2 sm:gap-4 whitespace-nowrap">
+          <Link to="/contact" className="hover:text-gray-300 transition-colors">
+            {t('contact')}
+          </Link>
+          <Link to="/terms" className="hover:text-gray-300 transition-colors">
+            {t('terms')}
+          </Link>
+          <Link to="/privacy" className="hover:text-gray-300 transition-colors">
+            {t('privacy')}
+          </Link>
+          <Link to="/commercial-transaction" className="hover:text-gray-300 transition-colors">
+            {t('commercialTransaction')}
+          </Link>
+        </p>
       </div>
     </div>
   );

@@ -7,11 +7,14 @@ import Navigation from '../components/Navigation.js';
 import { createCheckoutSession } from '../utils/api.js';
 import { useLanguage } from '../i18n.js';
 
+type Currency = 'JPY' | 'USD';
+
 interface Expense {
   declarationId: string;
   title: string;
   description: string;
   limitAmount: number;
+  currency?: Currency;
   period: string;
   periodStart: string;
   periodEnd: string;
@@ -24,13 +27,14 @@ interface Expense {
 const ExpensesPage = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
-  const { t } = useLanguage();
+  const { language, t } = useLanguage();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [limitAmount, setLimitAmount] = useState('');
+  const [currency, setCurrency] = useState<Currency>(() => language === 'en' ? 'USD' : 'JPY');
   const [period, setPeriod] = useState<'monthly' | 'weekly' | 'custom'>('monthly');
   const [customEndDate, setCustomEndDate] = useState('');
   const [error, setError] = useState('');
@@ -72,12 +76,14 @@ const ExpensesPage = () => {
         title,
         description,
         limitAmount: Number(limitAmount),
+        currency,
         period,
         customEndDate: period === 'custom' ? customEndDate : undefined,
       });
       setTitle('');
       setDescription('');
       setLimitAmount('');
+      setCurrency(language === 'en' ? 'USD' : 'JPY');
       setPeriod('monthly');
       setCustomEndDate('');
       setShowForm(false);
@@ -198,14 +204,43 @@ const ExpensesPage = () => {
                 </div>
               )}
               <div>
-                <label className="block text-sm text-gray-400 mb-1">{t('limitAmountYen')}</label>
+                <label className="block text-sm text-gray-400 mb-2">{t('currency')}</label>
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setCurrency('JPY')}
+                    className={`flex-1 py-2 rounded-lg text-sm font-semibold border transition-colors ${
+                      currency === 'JPY'
+                        ? 'bg-white text-gray-950 border-white'
+                        : 'bg-gray-800 text-gray-400 border-gray-700'
+                    }`}
+                  >
+                    {t('currencyJpy')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCurrency('USD')}
+                    className={`flex-1 py-2 rounded-lg text-sm font-semibold border transition-colors ${
+                      currency === 'USD'
+                        ? 'bg-white text-gray-950 border-white'
+                        : 'bg-gray-800 text-gray-400 border-gray-700'
+                    }`}
+                  >
+                    {t('currencyUsd')}
+                  </button>
+                </div>
+                <p className="text-gray-500 text-xs mt-1">{t('currencyLockHelp')}</p>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">{t('limitAmount')}</label>
                 <input
                   type="number"
                   value={limitAmount}
                   onChange={(e) => setLimitAmount(e.target.value)}
                   className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500"
-                  placeholder="10000"
-                  min="1"
+                  placeholder={currency === 'JPY' ? '10000' : '100'}
+                  min={currency === 'JPY' ? '1' : '0.01'}
+                  step={currency === 'JPY' ? '1' : '0.01'}
                   required
                 />
               </div>

@@ -14,15 +14,17 @@ interface Declaration {
   reportedAt: string;
   ogpImageUrl: string;
   sharedAt: string;
+  publicSharedAt?: string;
   isLocked?: boolean;
 }
 
 interface DeclarationCardProps {
   declaration: Declaration;
   onUpdate: () => void;
+  onStatusConfirmed?: (declaration: Declaration) => void;
 }
 
-const DeclarationCard = ({ declaration, onUpdate }: DeclarationCardProps) => {
+const DeclarationCard = ({ declaration, onUpdate, onStatusConfirmed }: DeclarationCardProps) => {
   const { t, locale } = useLanguage();
   const [loading, setLoading] = useState(false);
   const requiresShare = declaration.status === 'failed' && !declaration.sharedAt;
@@ -36,6 +38,11 @@ const DeclarationCard = ({ declaration, onUpdate }: DeclarationCardProps) => {
 
   try {
     await api.patch(`/declarations/${declaration.declarationId}/status`, { status });
+    onStatusConfirmed?.({
+      ...declaration,
+      status,
+      reportedAt: new Date().toISOString(),
+    });
     onUpdate();
   } catch (err) {
     const message = (err as { response?: { data?: { message?: string } } }).response?.data?.message;
@@ -67,9 +74,20 @@ const DeclarationCard = ({ declaration, onUpdate }: DeclarationCardProps) => {
     <div className={`bg-gray-900 border rounded-xl p-5 mb-4 ${declaration.isLocked ? 'border-yellow-700/60' : 'border-gray-800'}`}>
       <div className="flex justify-between items-start mb-3">
         <h3 className="text-white font-semibold text-lg flex-1 mr-4">{declaration.title}</h3>
-        <span className={`text-xs px-3 py-1 rounded-full border whitespace-nowrap ${declaration.isLocked ? 'bg-yellow-900/30 text-yellow-300 border-yellow-700' : config.className}`}>
-          {declaration.isLocked ? t('premiumLockedBadge') : config.label}
-        </span>
+        <div className="flex flex-wrap justify-end gap-2">
+          {declaration.publicSharedAt ? (
+            <span className="text-xs px-3 py-1 rounded-full border whitespace-nowrap bg-blue-900/30 text-blue-300 border-blue-800">
+              {t('publicCommitmentBadge')}
+            </span>
+          ) : (
+            <span className="text-xs px-3 py-1 rounded-full border whitespace-nowrap bg-gray-800 text-gray-500 border-gray-700">
+              {t('privateCommitmentBadge')}
+            </span>
+          )}
+          <span className={`text-xs px-3 py-1 rounded-full border whitespace-nowrap ${declaration.isLocked ? 'bg-yellow-900/30 text-yellow-300 border-yellow-700' : config.className}`}>
+            {declaration.isLocked ? t('premiumLockedBadge') : config.label}
+          </span>
+        </div>
       </div>
 
       {declaration.description && (
@@ -91,6 +109,22 @@ const DeclarationCard = ({ declaration, onUpdate }: DeclarationCardProps) => {
           >
             {t('upgradePremium')}
           </button>
+        </div>
+      )}
+
+      {!declaration.publicSharedAt && declaration.status === 'pending' && !declaration.isLocked && (
+        <div className="bg-blue-900/20 border border-blue-800 rounded-lg p-4 mb-4">
+          <p className="text-blue-300 text-sm font-semibold mb-1">{t('reduceEscapeTitle')}</p>
+          <p className="text-gray-400 text-sm mb-3">{t('privateCommitmentLead')}</p>
+          <ShareButton
+            declarationId={declaration.declarationId}
+            title={declaration.title}
+            type="declaration"
+            onShare={async () => {
+              await api.patch(`/declarations/${declaration.declarationId}/public-shared`, {});
+              onUpdate();
+            }}
+          />
         </div>
       )}
 
@@ -135,21 +169,6 @@ const DeclarationCard = ({ declaration, onUpdate }: DeclarationCardProps) => {
     )}
   </div>
 )}
-
-      {/* 達成時の任意シェア */}
-      {declaration.status === 'done' && !declaration.reportedAt && !declaration.isLocked && (
-        <div className="mt-3">
-          <p className="text-gray-500 text-xs mb-2">
-            {t('shareTip')}
-          </p>
-          <ShareButton
-            declarationId={declaration.declarationId}
-            title={declaration.title}
-            type="declaration"
-            onShare={onUpdate}
-          />
-        </div>
-      )}
 
       {error && <p className="text-red-400 text-sm mt-3">{error}</p>}
     </div>

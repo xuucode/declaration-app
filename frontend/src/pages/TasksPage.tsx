@@ -18,6 +18,7 @@ interface Declaration {
   reportedAt: string;
   ogpImageUrl: string;
   sharedAt: string;
+  publicSharedAt?: string;
   isLocked?: boolean;
 }
 
@@ -32,8 +33,8 @@ const TasksPage = () => {
   const [description, setDescription] = useState('');
   const [deadline, setDeadline] = useState('');
   const [error, setError] = useState('');
-  const [newDeclaration, setNewDeclaration] = useState<Declaration | null>(null);
   const [isCustomDeadline, setIsCustomDeadline] = useState(false);
+  const [confirmedDeclaration, setConfirmedDeclaration] = useState<Declaration | null>(null);
 
   const fetchDeclarations = useCallback(async () => {
     try {
@@ -60,14 +61,26 @@ const TasksPage = () => {
   const hasUnreportedFailed = declarations.some(
     (d) => d.status === 'failed' && !d.sharedAt && !d.isLocked
   );
+  const unsharedFailedDeclarations = declarations.filter(
+    (d) => d.status === 'failed' && !d.sharedAt && !d.isLocked && d.declarationId !== confirmedDeclaration?.declarationId
+  );
+
+  const handleResultShare = async () => {
+    if (!confirmedDeclaration) return;
+    await api.patch(`/declarations/${confirmedDeclaration.declarationId}/shared`, {});
+    setConfirmedDeclaration({
+      ...confirmedDeclaration,
+      sharedAt: new Date().toISOString(),
+    });
+    fetchDeclarations();
+  };
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
     try {
-      const res = await api.post('/declarations', { title, description, deadline });
-      setNewDeclaration(res.data);
+      await api.post('/declarations', { title, description, deadline });
       setTitle('');
       setDescription('');
       setDeadline('');
@@ -93,30 +106,39 @@ const TasksPage = () => {
       <div className="max-w-2xl mx-auto px-4 py-8">
         <h2 className="text-white text-2xl font-bold mb-6">{t('tasks')}</h2>
 
-        {/* 新規宣言作成後のシェア */}
-        {newDeclaration && (
-          <div className="bg-gray-900 border border-blue-800 rounded-xl p-5 mb-6">
-            <p className="text-white font-semibold mb-1">{t('declarationCreated')}</p>
-            <p className="text-gray-400 text-sm mb-4">
-              {t('shareTip')}
-            </p>
-            <ShareButton
-              declarationId={newDeclaration.declarationId}
-              title={newDeclaration.title}
-              type="declaration"
-              onShare={() => setNewDeclaration(null)}
-            />
-            <button
-              onClick={() => setNewDeclaration(null)}
-              className="w-full mt-2 py-2 text-gray-500 hover:text-gray-300 text-sm transition-colors"
-            >
-              {t('skip')}
-            </button>
-          </div>
+        {confirmedDeclaration && !confirmedDeclaration.isLocked && (
+          confirmedDeclaration.sharedAt ? (
+            <div className="bg-blue-900/20 border border-blue-800 rounded-xl px-5 py-4 mb-6">
+              <p className="text-blue-300 text-sm font-semibold">{t('taskResultShared')}</p>
+            </div>
+          ) : (
+            <div className={`border rounded-xl p-5 mb-6 ${
+              confirmedDeclaration.status === 'done'
+                ? 'bg-green-900/20 border-green-800'
+                : 'bg-red-900/20 border-red-800'
+            }`}>
+              <p className={`text-sm font-semibold mb-1 ${
+                confirmedDeclaration.status === 'done' ? 'text-green-300' : 'text-red-300'
+              }`}>
+                {confirmedDeclaration.status === 'done' ? t('taskDoneConfirmedTitle') : t('taskFailedConfirmedTitle')}
+              </p>
+              <p className="text-white font-semibold mb-2">{confirmedDeclaration.title}</p>
+              <p className="text-gray-400 text-sm mb-4">
+                {confirmedDeclaration.status === 'done' ? t('taskDoneShareLead') : t('taskFailedShareLead')}
+              </p>
+              <ShareButton
+                declarationId={confirmedDeclaration.declarationId}
+                title={confirmedDeclaration.title}
+                type={confirmedDeclaration.status === 'done' ? 'progress' : 'failed'}
+                detail={confirmedDeclaration.status === 'done' ? t('taskDoneShareDetail') : undefined}
+                onShare={handleResultShare}
+              />
+            </div>
+          )
         )}
 
         {/* 宣言作成ボタン */}
-        {!showForm && !newDeclaration && (
+        {!showForm && (
           <button
             onClick={() => {
               if (hasUnreportedFailed) {
@@ -275,12 +297,10 @@ const TasksPage = () => {
         )}
 
         {/* 未共有の未達成タスク */}
-        {declarations.filter((d) => d.status === 'failed' && !d.sharedAt && !d.isLocked).length > 0 && (
+        {unsharedFailedDeclarations.length > 0 && (
       <div className="mb-6">
     <h2 className="text-white font-semibold text-lg mb-4">{t('shareRequiredTasks')}</h2>
-       {declarations
-      .filter((d) => d.status === 'failed' && !d.sharedAt && !d.isLocked)
-      .map((d) => (
+       {unsharedFailedDeclarations.map((d) => (
         <DeclarationCard key={d.declarationId} declaration={d} onUpdate={fetchDeclarations} />
       ))}
     </div>
@@ -296,7 +316,12 @@ const TasksPage = () => {
           declarations
             .filter((d) => d.status === 'pending')
             .map((d) => (
-              <DeclarationCard key={d.declarationId} declaration={d} onUpdate={fetchDeclarations} />
+              <DeclarationCard
+                key={d.declarationId}
+                declaration={d}
+                onUpdate={fetchDeclarations}
+                onStatusConfirmed={setConfirmedDeclaration}
+              />
             ))
         )}
         <button

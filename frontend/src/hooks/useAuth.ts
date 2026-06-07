@@ -7,6 +7,7 @@ interface User {
   email: string;
   displayName: string;
   streakCount: number;
+  shareStreakCount?: number;
   createdAt: string;
   subscriptionStatus?: string;
   stripeCustomerId?: string;

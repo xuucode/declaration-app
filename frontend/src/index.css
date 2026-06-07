@@ -539,3 +539,256 @@ a:focus-visible {
     grid-template-columns: 2.5rem 1fr;
   }
 }
+
+@media (max-width: 640px) {
+  body {
+    background:
+      radial-gradient(circle at top left, rgba(37, 99, 235, 0.1), transparent 18rem),
+      linear-gradient(180deg, #101622 0%, var(--surface-page) 22rem);
+  }
+
+  .bg-gray-950 {
+    background:
+      linear-gradient(180deg, #141c28 0%, #090d14 44%, var(--surface-page) 100%) !important;
+    background-attachment: scroll !important;
+  }
+
+  .min-h-screen.bg-gray-950::before {
+    background-size: 36px 36px, 36px 36px, auto;
+    opacity: 0.72;
+    mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.62), transparent 62%);
+  }
+
+  .app-header {
+    padding: 0.5rem 0.75rem !important;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.32);
+  }
+
+  .app-header .max-w-2xl {
+    min-height: 3.75rem;
+  }
+
+  .nav-brand {
+    padding: 0;
+  }
+
+  .nav-brand img {
+    height: 4.25rem !important;
+    max-width: 13rem !important;
+  }
+
+  .nav-menu-button {
+    width: 2.5rem;
+    height: 2.5rem;
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin-right: 0.75rem !important;
+  }
+
+  .mobile-nav-panel {
+    margin-top: 0.5rem !important;
+    padding: 0.5rem 0 0.75rem !important;
+    border-radius: 0 0 0.75rem 0.75rem;
+  }
+
+  .nav-mobile-item,
+  .mobile-nav-panel button {
+    min-height: 2.5rem;
+    padding-top: 0.65rem !important;
+    padding-bottom: 0.65rem !important;
+  }
+
+  .max-w-2xl {
+    max-width: 100% !important;
+  }
+
+  .max-w-2xl.mx-auto.px-4.py-8 {
+    padding: 1rem 0.75rem 1.5rem !important;
+  }
+
+  .max-w-2xl > h2,
+  .max-w-2xl > div > h2 {
+    font-size: 1.25rem !important;
+    margin-bottom: 1rem !important;
+  }
+
+  .bg-gray-900.border {
+    border-radius: 0.625rem !important;
+  }
+
+  .p-5,
+  .p-6,
+  .p-8 {
+    padding: 1rem !important;
+  }
+
+  .dashboard-hero {
+    margin-bottom: 1rem !important;
+  }
+
+  .dashboard-hero > .flex {
+    align-items: flex-start !important;
+    gap: 0.75rem !important;
+    margin-bottom: 0.875rem !important;
+  }
+
+  .dashboard-kicker {
+    font-size: 0.58rem;
+    margin-bottom: 0.25rem;
+    letter-spacing: 0.12em;
+  }
+
+  .dashboard-hero h2 {
+    font-size: 1rem !important;
+    line-height: 1.35;
+  }
+
+  .dashboard-hero h2 + p {
+    font-size: 0.72rem !important;
+    line-height: 1.45;
+  }
+
+  .dashboard-stats {
+    display: flex !important;
+    grid-template-columns: none !important;
+    gap: 0.5rem !important;
+    overflow-x: auto;
+    padding-bottom: 0.2rem;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .dashboard-stats::-webkit-scrollbar {
+    display: none;
+  }
+
+  .dashboard-stats > div {
+    min-width: 5.35rem;
+    flex: 0 0 5.35rem;
+    padding: 0.65rem 0.45rem !important;
+    scroll-snap-align: start;
+  }
+
+  .dashboard-stats > div p:first-child {
+    font-size: 1rem !important;
+    line-height: 1.25;
+  }
+
+  .dashboard-stats > div p:last-child {
+    font-size: 0.62rem !important;
+    margin-top: 0.2rem !important;
+  }
+
+  .grid.grid-cols-7.gap-2 {
+    gap: 0.25rem !important;
+  }
+
+  .grid.grid-cols-7.gap-2 > div {
+    min-height: 2.8rem !important;
+    padding: 0.35rem 0.2rem !important;
+    border-radius: 0.375rem !important;
+  }
+
+  .grid.grid-cols-7.gap-2 > div p:first-child {
+    font-size: 0.56rem !important;
+    margin-bottom: 0.2rem !important;
+  }
+
+  .grid.grid-cols-7.gap-2 > div p:nth-child(2) {
+    font-size: 0.62rem !important;
+    line-height: 1.1;
+  }
+
+  .calendar-expense-amount {
+    display: none !important;
+  }
+
+  .bg-gray-900.border.rounded-xl.p-5.mb-6 .flex.items-center.justify-between {
+    align-items: flex-start !important;
+  }
+
+  .bg-gray-900.border.rounded-xl.p-5.mb-6 h2 {
+    font-size: 0.95rem !important;
+  }
+
+  .bg-gray-900.border.rounded-xl.p-5.mb-6 button.h-9 {
+    width: 2rem !important;
+    height: 2rem !important;
+  }
+
+  .bg-gray-900.border.rounded-xl.p-5.mb-4,
+  .bg-gray-900.border.rounded-xl.p-6,
+  .bg-gray-900.border.rounded-xl.p-5 {
+    margin-bottom: 0.75rem !important;
+  }
+
+  .bg-gray-900.border.rounded-xl.p-5.mb-4 > .flex.justify-between,
+  .bg-gray-900.border.rounded-xl.p-6.mb-6 > .flex.justify-between {
+    gap: 0.625rem !important;
+  }
+
+  h3.text-white.font-semibold.text-lg,
+  h3.text-white.font-semibold {
+    font-size: 0.95rem !important;
+    line-height: 1.35;
+  }
+
+  .text-xs.px-3.py-1.rounded-full,
+  span.text-xs.px-3.py-1,
+  .bg-yellow-900\/30.text-yellow-300,
+  .bg-blue-900\/30.text-blue-300,
+  .bg-gray-800.text-gray-500 {
+    font-size: 0.62rem !important;
+    padding: 0.18rem 0.45rem !important;
+  }
+
+  button.w-full,
+  .w-full.py-3,
+  .w-full.py-4 {
+    min-height: 2.6rem;
+    font-size: 0.88rem !important;
+  }
+
+  input,
+  textarea {
+    font-size: 0.92rem !important;
+    padding: 0.75rem 0.875rem !important;
+  }
+
+  .app-footer-links {
+    transform: scale(0.86);
+    transform-origin: center top;
+    gap: 0.55rem !important;
+    margin-left: -1rem;
+    margin-right: -1rem;
+  }
+
+  .auth-shell {
+    padding: 1rem 0.75rem 1.5rem !important;
+  }
+
+  .auth-language-toggle {
+    top: 0.75rem;
+    right: 0.75rem;
+  }
+
+  .auth-overview {
+    padding-top: 3.5rem;
+  }
+
+  .auth-overview > img {
+    height: 7.5rem !important;
+    margin-bottom: 1rem !important;
+  }
+
+  .auth-overview h1 {
+    font-size: 1.9rem !important;
+    line-height: 1.18 !important;
+  }
+
+  .auth-overview p {
+    line-height: 1.65 !important;
+  }
+}

@@ -46,10 +46,15 @@ export const getExpenses = async (req: AuthRequest, res: Response): Promise<void
 
 // 支出管理作成
 export const createExpense = async (req: AuthRequest, res: Response): Promise<void> => {
-  const { title, description, limitAmount, period, customEndDate } = req.body;
+  const { title, description, limitAmount, period, customEndDate, currency = 'JPY' } = req.body;
 
   if (!title || !limitAmount || !period) {
     res.status(400).json({ message: '必須項目が不足しています' });
+    return;
+  }
+
+  if (!['JPY', 'USD'].includes(currency)) {
+    res.status(400).json({ message: 'currencyはJPYまたはUSDである必要があります' });
     return;
   }
 
@@ -59,8 +64,8 @@ export const createExpense = async (req: AuthRequest, res: Response): Promise<vo
   }
 
   const numericLimitAmount = Number(limitAmount);
-  if (!Number.isFinite(numericLimitAmount) || numericLimitAmount < 1) {
-    res.status(400).json({ message: '上限金額は1円以上で入力してください' });
+  if (!Number.isFinite(numericLimitAmount) || numericLimitAmount <= 0) {
+    res.status(400).json({ message: '上限金額は0より大きい数値で入力してください' });
     return;
   }
 
@@ -139,6 +144,7 @@ export const createExpense = async (req: AuthRequest, res: Response): Promise<vo
       title,
       description: description ?? '',
       limitAmount: numericLimitAmount,
+      currency,
       period,
       periodStart,
       periodEnd,
@@ -163,10 +169,16 @@ export const createExpense = async (req: AuthRequest, res: Response): Promise<vo
 // 支出ログ追加
 export const addExpenseLog = async (req: AuthRequest, res: Response): Promise<void> => {
   const id = req.params['id'] as string;
-  const { amount, memo } = req.body;
+  const { amount, memo, currency } = req.body;
 
   if (!amount) {
     res.status(400).json({ message: '金額は必須です' });
+    return;
+  }
+
+  const numericAmount = Number(amount);
+  if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
+    res.status(400).json({ message: '金額は0より大きい数値で入力してください' });
     return;
   }
 
@@ -180,6 +192,12 @@ export const addExpenseLog = async (req: AuthRequest, res: Response): Promise<vo
     const expense = expenseResult.Item;
     if (!expense || expense.userId !== req.userId || expense.type !== 'expense') {
       res.status(404).json({ message: '支出管理が見つかりません' });
+      return;
+    }
+
+    const expenseCurrency = expense.currency ?? 'JPY';
+    if (currency && currency !== expenseCurrency) {
+      res.status(400).json({ message: 'この支出管理で設定した通貨以外の金額は記録できません' });
       return;
     }
 
@@ -228,7 +246,8 @@ export const addExpenseLog = async (req: AuthRequest, res: Response): Promise<vo
           expenseId,
           declarationId: id,
           date: today,
-          amount,
+          amount: numericAmount,
+          currency: expenseCurrency,
           memo: memo ?? '',
           createdAt: new Date().toISOString(),
         },
@@ -241,7 +260,7 @@ export const addExpenseLog = async (req: AuthRequest, res: Response): Promise<vo
         TableName: TABLES.DECLARATIONS,
         Key: { declarationId: id },
         UpdateExpression: 'ADD totalAmount :amount',
-        ExpressionAttributeValues: { ':amount': amount },
+        ExpressionAttributeValues: { ':amount': numericAmount },
       })
     );
 
@@ -256,6 +275,18 @@ export const getExpenseLogs = async (req: AuthRequest, res: Response): Promise<v
   const id = req.params['id'] as string;
 
   try {
+    const expenseResult = await docClient.send(
+      new GetCommand({
+        TableName: TABLES.DECLARATIONS,
+        Key: { declarationId: id },
+      })
+    );
+    const expense = expenseResult.Item;
+    if (!expense || expense.userId !== req.userId || expense.type !== 'expense') {
+      res.status(404).json({ message: '支出管理が見つかりません' });
+      return;
+    }
+
     const result = await docClient.send(
       new QueryCommand({
         TableName: TABLES.EXPENSE_LOGS,
@@ -340,6 +371,12 @@ export const deleteExpense = async (req: AuthRequest, res: Response): Promise<vo
 export const updateExpense = async (req: AuthRequest, res: Response): Promise<void> => {
   const id = req.params['id'] as string;
   const { title, description, limitAmount } = req.body;
+  const numericLimitAmount = Number(limitAmount);
+
+  if (!title || !Number.isFinite(numericLimitAmount) || numericLimitAmount <= 0) {
+    res.status(400).json({ message: '必須項目が不足しているか、上限金額が不正です' });
+    return;
+  }
 
   try {
     await docClient.send(
@@ -350,7 +387,7 @@ export const updateExpense = async (req: AuthRequest, res: Response): Promise<vo
         ExpressionAttributeValues: {
           ':title': title,
           ':description': description ?? '',
-          ':limitAmount': limitAmount,
+          ':limitAmount': numericLimitAmount,
         },
       })
     );

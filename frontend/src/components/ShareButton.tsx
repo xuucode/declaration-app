@@ -3,25 +3,35 @@ import { useLanguage } from '../i18n.js';
 interface ShareButtonProps {
   declarationId: string;
   title: string;
-  type: 'declaration' | 'failed';
-  onShare?: () => void;
+  type: 'declaration' | 'failed' | 'progress';
+  detail?: string;
+  onShare?: () => void | Promise<void>;
 }
 
-const ShareButton = ({ declarationId, title, type, onShare }: ShareButtonProps) => {
+const ShareButton = ({ declarationId, title, type, detail, onShare }: ShareButtonProps) => {
   const { language, t } = useLanguage();
   const url = `${window.location.origin}/declarations/${declarationId}`;
   const text = language === 'ja'
     ? (type === 'declaration'
-      ? `「${title}」と宣言しました！達成できるか見届けてください💪`
-      : `「${title}」が未達成でした😔 次こそ達成します！`)
+      ? `逃げ道を減らすために、Structで公開宣言しました。「${title}」をやります。見届けてください。`
+      : type === 'progress'
+        ? `Structで公開宣言中。「${title}」${detail ? ` ${detail}` : ''}。このまま続けます。`
+        : `「${title}」が未達成でした。逃げずに公開報告します。次は立て直します。`)
     : (type === 'declaration'
-      ? `I committed to "${title}"! Watch me follow through 💪`
-      : `I failed "${title}" 😔 I'll do better next time!`);
+      ? `I am reducing my escape routes with a public commitment on Struct: "${title}". Watch me follow through.`
+      : type === 'progress'
+        ? `Public commitment update on Struct: "${title}"${detail ? ` ${detail}` : ''}. I am keeping it going.`
+        : `I failed "${title}". I am reporting it publicly and getting back on track.`);
+  const label = type === 'failed'
+    ? t('publicFailureReport')
+    : type === 'progress'
+      ? t('publicProgressShare')
+      : t('publicCommitmentAction');
 
-  const handleShare = () => {
+  const handleShare = async () => {
     const tweetUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
     window.open(tweetUrl, '_blank');
-    onShare?.();
+    await onShare?.();
   };
 
   return (
@@ -30,7 +40,7 @@ const ShareButton = ({ declarationId, title, type, onShare }: ShareButtonProps) 
       className="w-full flex items-center justify-center gap-2 bg-black text-white font-semibold py-3 rounded-lg hover:bg-gray-900 transition-colors border border-gray-700"
     >
       <span className="text-lg font-bold">𝕏</span>
-      {t('shareOnX')}
+      {label}
     </button>
   );
 };

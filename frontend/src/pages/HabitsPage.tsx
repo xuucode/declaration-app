@@ -15,6 +15,9 @@ interface Habit {
   limitValue: number | null;
   status: string;
   streakCount: number;
+  achievedCount?: number;
+  totalCount?: number;
+  publicSharedAt?: string;
   createdAt: string;
   isLocked?: boolean;
 }

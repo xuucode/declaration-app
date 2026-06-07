@@ -6,15 +6,29 @@ import { useLanguage } from '../i18n.js';
 
 interface Declaration {
   declarationId: string;
+  type?: 'task' | 'habit' | 'expense';
   title: string;
   description: string;
-  deadline: string;
-  status: 'pending' | 'done' | 'failed';
+  deadline?: string;
+  status: 'pending' | 'done' | 'failed' | 'active';
   createdAt: string;
   reportedAt: string;
   ogpImageUrl: string;
   userId: string;
   sharedAt: string;
+  publicSharedAt?: string;
+  displayName?: string;
+  shareStreakCount?: number;
+  publicStats?: {
+    kind: 'task' | 'habit';
+    deadline?: string;
+    status?: 'pending' | 'done' | 'failed' | 'active';
+    reportedAt?: string;
+    streakCount?: number;
+    achievedCount?: number;
+    totalCount?: number;
+    lastUpdatedAt?: string;
+  };
 }
 
 const DeclarationPage = () => {
@@ -75,7 +89,10 @@ const DeclarationPage = () => {
     );
   }
 
-  const config = statusConfig[declaration.status];
+  const config = declaration.status === 'active' ? statusConfig.pending : statusConfig[declaration.status];
+  const publicKind = declaration.publicStats?.kind ?? (declaration.type === 'habit' ? 'habit' : 'task');
+  const isHabitPublic = publicKind === 'habit';
+  const stats = declaration.publicStats;
 
   return (
     <div className="min-h-screen bg-gray-950">
@@ -88,8 +105,11 @@ const DeclarationPage = () => {
 
       <div className="max-w-2xl mx-auto px-4 py-8">
         <div className={`${config.bg} border ${config.border} rounded-2xl p-8 mb-6 text-center`}>
+          <p className="text-blue-300 text-xs font-bold tracking-[0.22em] mb-3">
+            {isHabitPublic ? t('publicHabitKicker') : t('publicTaskKicker')}
+          </p>
           <p className={`text-sm font-semibold mb-4 ${config.text}`}>
-            {config.label}
+            {isHabitPublic ? t('publicCommitmentBadge') : config.label}
           </p>
           <h2 className="text-white text-3xl font-bold mb-4 leading-snug">
             {declaration.title}
@@ -97,8 +117,43 @@ const DeclarationPage = () => {
           {declaration.description && (
             <p className="text-gray-400 text-base mb-4">{declaration.description}</p>
           )}
-          <p className="text-gray-500 text-sm">
-            {t('deadline')}：{new Date(declaration.deadline).toLocaleString(locale)}
+          {declaration.displayName && (
+            <p className="text-gray-500 text-sm mb-5">
+              {t('publicCommittedBy')}：{declaration.displayName}
+            </p>
+          )}
+
+          {isHabitPublic ? (
+            <div className="grid grid-cols-3 gap-3 mt-6">
+              <div className="bg-gray-950/60 border border-gray-800 rounded-lg p-4">
+                <p className="text-orange-400 text-2xl font-bold">🔥 {stats?.streakCount ?? 0}</p>
+                <p className="text-gray-500 text-xs mt-1">{t('streakDays')}</p>
+              </div>
+              <div className="bg-gray-950/60 border border-gray-800 rounded-lg p-4">
+                <p className="text-blue-300 text-2xl font-bold">{stats?.achievedCount ?? 0}/{stats?.totalCount ?? 0}</p>
+                <p className="text-gray-500 text-xs mt-1">{t('habitCompletionCount')}</p>
+              </div>
+              <div className="bg-gray-950/60 border border-gray-800 rounded-lg p-4">
+                <p className="text-purple-300 text-2xl font-bold">𝕏 {declaration.shareStreakCount ?? 0}</p>
+                <p className="text-gray-500 text-xs mt-1">{t('shareStreak')}</p>
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-3 mt-6">
+              <div className="bg-gray-950/60 border border-gray-800 rounded-lg p-4">
+                <p className={`text-xl font-bold ${config.text}`}>{config.label}</p>
+                <p className="text-gray-500 text-xs mt-1">{t('publicTaskStatus')}</p>
+              </div>
+              <div className="bg-gray-950/60 border border-gray-800 rounded-lg p-4">
+                <p className="text-white text-sm font-semibold">
+                  {declaration.deadline ? new Date(declaration.deadline).toLocaleString(locale) : '-'}
+                </p>
+                <p className="text-gray-500 text-xs mt-1">{t('deadline')}</p>
+              </div>
+            </div>
+          )}
+          <p className="text-gray-500 text-sm mt-6">
+            {t('publicPageCommitmentLead')}
           </p>
         </div>
 

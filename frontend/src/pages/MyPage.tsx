@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../utils/api.js';
 import { useAuth } from '../hooks/useAuth.js';
 import DeclarationCard from '../components/DeclarationCard.js';
@@ -8,6 +8,8 @@ import ExpenseCard from '../components/ExpenseCard.js';
 import Navigation from '../components/Navigation.js';
 import { confirmCheckoutSession, createCheckoutSession } from '../utils/api.js';
 import { useLanguage } from '../i18n.js';
+
+type Currency = 'JPY' | 'USD';
 
 interface Declaration {
   declarationId: string;
@@ -19,6 +21,7 @@ interface Declaration {
   reportedAt: string;
   ogpImageUrl: string;
   sharedAt: string;
+  publicSharedAt?: string;
   isLocked?: boolean;
 }
 
@@ -30,6 +33,9 @@ interface Habit {
   limitValue: number | null;
   status: string;
   streakCount: number;
+  achievedCount?: number;
+  totalCount?: number;
+  publicSharedAt?: string;
   createdAt: string;
   isLocked?: boolean;
 }
@@ -39,6 +45,7 @@ interface Expense {
   title: string;
   description: string;
   limitAmount: number;
+  currency?: Currency;
   period: string;
   periodStart: string;
   periodEnd: string;
@@ -54,6 +61,7 @@ interface CalendarDay {
   achieved: number;
   total: number;
   expenseAmount: number;
+  expenseAmounts?: Record<Currency, number>;
 }
 
 const MyPage = () => {
@@ -153,6 +161,22 @@ const MyPage = () => {
   const activeDeclarations = declarations.filter((d) => d.status === 'pending');
   const activeHabits = habits.filter((h) => h.status === 'active');
   const activeExpenses = expenses.filter((e) => e.status === 'active');
+  const formatAmount = (value: number, currency: Currency) => new Intl.NumberFormat(locale, {
+    style: 'currency',
+    currency,
+    maximumFractionDigits: currency === 'JPY' ? 0 : 2,
+  }).format(value);
+  const totalExpenseOverAmounts = activeExpenses.reduce<Record<Currency, number>>(
+    (sum, expense) => {
+      const currency = expense.currency ?? 'JPY';
+      sum[currency] += Math.max(expense.totalAmount - expense.limitAmount, 0);
+      return sum;
+    },
+    { JPY: 0, USD: 0 }
+  );
+  const overAmountLabels = (Object.entries(totalExpenseOverAmounts) as [Currency, number][])
+    .filter(([, amount]) => amount > 0)
+    .map(([currency, amount]) => formatAmount(amount, currency));
   const hasActiveItems = activeDeclarations.length > 0 || activeHabits.length > 0 || activeExpenses.length > 0;
   const calendarMonthDate = new Date(`${calendarMonth}-01T00:00:00`);
   const calendarStartPadding = calendarMonthDate.getDay();
@@ -197,7 +221,7 @@ const MyPage = () => {
               <p className="dashboard-kicker">STRUCT DASHBOARD</p>
               <h2 className="text-white text-xl font-bold">{user?.displayName}</h2>
               {user?.goal && (
-                <p className="text-gray-200 text-sm mt-1">{user.goal}</p>
+                <p className="text-gray-200 text-sm mt-1">{t('goalLabel')}：{user.goal}</p>
               )}
             </div>
             {user?.subscriptionStatus === 'active' ? (
@@ -220,18 +244,32 @@ const MyPage = () => {
               </button>
             )}
           </div>
-          <div className="dashboard-stats grid grid-cols-3 gap-3">
+          <div className="dashboard-stats grid grid-cols-3 md:grid-cols-5 gap-2 sm:gap-3">
             <div className="text-center">
-              <p className="text-2xl font-bold text-orange-400">🔥 {user?.streakCount}</p>
+              <p className="text-xl sm:text-2xl font-bold text-orange-400">🔥 {user?.streakCount}</p>
               <p className="text-gray-500 text-xs mt-1">{t('streakDays')}</p>
             </div>
             <div className="text-center">
-              <p className="text-2xl font-bold text-blue-400">{achieveRate}%</p>
+              <p className="text-xl sm:text-2xl font-bold text-blue-400">{achieveRate}%</p>
               <p className="text-gray-500 text-xs mt-1">{t('achievementRate')}</p>
             </div>
             <div className="text-center">
-              <p className="text-2xl font-bold text-white">{declarations.length}</p>
+              <p className="text-xl sm:text-2xl font-bold text-white">{declarations.length}</p>
               <p className="text-gray-500 text-xs mt-1">{t('totalDeclarations')}</p>
+            </div>
+            <div className="text-center">
+              <p className="text-xl sm:text-2xl font-bold text-purple-300">𝕏 {user?.shareStreakCount ?? 0}</p>
+              <p className="text-gray-500 text-xs mt-1">{t('shareStreak')}</p>
+            </div>
+            <div className="text-center">
+              {overAmountLabels.length > 0 ? (
+                <p className="text-red-400 text-sm sm:text-lg md:text-xl font-bold break-words">
+                  {overAmountLabels.join(' / ')}
+                </p>
+              ) : (
+                <p className="text-green-400 text-xl sm:text-2xl font-bold">OK</p>
+              )}
+              <p className="text-gray-500 text-xs mt-1">{t('budgetStatusTitle')}</p>
             </div>
           </div>
         </div>
@@ -284,7 +322,7 @@ const MyPage = () => {
                     <p className="text-gray-500 text-[11px] leading-none mb-2">
                       {Number(day.date.slice(8, 10))}
                     </p>
-                    <p className={`text-sm font-bold ${
+                    <p className={`text-[11px] sm:text-sm font-bold ${
                       day.achievementRate === null
                         ? 'text-gray-700'
                         : day.achievementRate === 100
@@ -295,14 +333,18 @@ const MyPage = () => {
                     }`}>
                       {day.achievementRate === null ? '-' : `${day.achievementRate}%`}
                     </p>
-                    <p className="text-[11px] text-gray-600 mt-1">
-                      {day.total > 0 ? `${day.achieved}/${day.total}` : t('noCalendarRecords')}
-                    </p>
-                    {day.expenseAmount > 0 && (
-                      <p className="text-[11px] text-red-300 mt-1 truncate">
-                        -¥{day.expenseAmount.toLocaleString()}
+                    {day.total > 0 && (
+                      <p className="hidden sm:block text-[11px] text-gray-600 mt-1">
+                        {day.achieved}/{day.total}
                       </p>
                     )}
+                    {(Object.entries(day.expenseAmounts ?? { JPY: day.expenseAmount, USD: 0 }) as [Currency, number][])
+                      .filter(([, amount]) => amount > 0)
+                      .map(([currency, amount]) => (
+                        <p key={currency} className="calendar-expense-amount text-[11px] text-red-300 mt-1 truncate">
+                          -{formatAmount(amount, currency)}
+                        </p>
+                      ))}
                   </>
                 )}
               </div>
@@ -334,7 +376,14 @@ const MyPage = () => {
           <>
             <h2 className="text-white font-semibold text-lg mb-4">{t('activeTasks')}</h2>
             {activeDeclarations.map((d) => (
-              <DeclarationCard key={d.declarationId} declaration={d} onUpdate={fetchDeclarations} />
+              <DeclarationCard
+                key={d.declarationId}
+                declaration={d}
+                onUpdate={() => {
+                  fetchDeclarations();
+                  refreshUser();
+                }}
+              />
             ))}
           </>
         )}
@@ -344,7 +393,14 @@ const MyPage = () => {
           <>
             <h2 className="text-white font-semibold text-lg mb-4 mt-8">{t('activeHabits')}</h2>
             {activeHabits.map((h) => (
-              <HabitCard key={h.declarationId} habit={h} onUpdate={fetchHabits} />
+              <HabitCard
+                key={h.declarationId}
+                habit={h}
+                onUpdate={() => {
+                  fetchHabits();
+                  refreshUser();
+                }}
+              />
             ))}
           </>
         )}
@@ -354,24 +410,17 @@ const MyPage = () => {
           <>
             <h2 className="text-white font-semibold text-lg mb-4 mt-8">{t('expenses')}</h2>
             {activeExpenses.map((e) => (
-              <ExpenseCard key={e.declarationId} expense={e} onUpdate={fetchExpenses} />
+              <ExpenseCard
+                key={e.declarationId}
+                expense={e}
+                onUpdate={() => {
+                  fetchExpenses();
+                  refreshUser();
+                }}
+              />
             ))}
           </>
         )}
-        <p className="text-center text-gray-600 mt-10 text-xs flex justify-center gap-4">
-          <Link to="/contact" className="hover:text-gray-300 transition-colors">
-            {t('contact')}
-          </Link>
-          <Link to="/terms" className="hover:text-gray-300 transition-colors">
-            {t('terms')}
-          </Link>
-          <Link to="/privacy" className="hover:text-gray-300 transition-colors">
-            {t('privacy')}
-          </Link>
-          <Link to="/commercial-transaction" className="hover:text-gray-300 transition-colors">
-            {t('commercialTransaction')}
-          </Link>
-        </p>
       </div>
     </div>
   );
