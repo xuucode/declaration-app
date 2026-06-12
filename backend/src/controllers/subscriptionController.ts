@@ -281,6 +281,11 @@ export const cancelSubscription = async (req: AuthRequest, res: Response): Promi
 };
 
 export const handleWebhook = async (req: any, res: Response): Promise<void> => {
+  if (!STRIPE_CONFIG.WEBHOOK_SECRET) {
+    res.status(503).json({ message: 'Stripe webhook secret is not configured' });
+    return;
+  }
+
   const sig = req.headers['stripe-signature'];
   let event;
 
@@ -288,7 +293,7 @@ export const handleWebhook = async (req: any, res: Response): Promise<void> => {
     event = stripe.webhooks.constructEvent(
       req.body,
       sig,
-      process.env.STRIPE_WEBHOOK_SECRET ?? ''
+      STRIPE_CONFIG.WEBHOOK_SECRET
     );
   } catch (e: any) {
     res.status(400).json({ message: `Webhook Error: ${e.message}` });

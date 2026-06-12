@@ -8,14 +8,19 @@ import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as path from 'path';
 import { Construct } from 'constructs';
 
+const productionFrontendUrls = [
+  'https://declaration-app-theta.vercel.app',
+  'https://declaration-32c0wbkfr-xuucodes-projects.vercel.app',
+].join(',');
+
 export class InfraStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
     const frontendUrl = new cdk.CfnParameter(this, 'FrontendUrl', {
       type: 'String',
-      default: 'http://localhost:5173',
-      description: 'Frontend URL allowed by CORS and used for Stripe redirects.',
+      default: productionFrontendUrls,
+      description: 'Comma-separated frontend URLs allowed by CORS. The first URL is used for Stripe redirects.',
     });
 
     const publicApiUrl = new cdk.CfnParameter(this, 'PublicApiUrl', {
@@ -57,7 +62,7 @@ export class InfraStack extends cdk.Stack {
         requireSymbols: false,
       },
       accountRecovery: cognito.AccountRecovery.EMAIL_ONLY,
-      removalPolicy: cdk.RemovalPolicy.DESTROY,
+      removalPolicy: cdk.RemovalPolicy.RETAIN,
     });
 
     // CognitoアプリクライアントS
@@ -74,7 +79,8 @@ export class InfraStack extends cdk.Stack {
       tableName: 'declaration-app-users',
       partitionKey: { name: 'userId', type: dynamodb.AttributeType.STRING },
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
-      removalPolicy: cdk.RemovalPolicy.DESTROY,
+      deletionProtection: true,
+      removalPolicy: cdk.RemovalPolicy.RETAIN,
     });
 
     // emailのGSI
@@ -88,7 +94,8 @@ export class InfraStack extends cdk.Stack {
       tableName: 'declaration-app-declarations',
       partitionKey: { name: 'declarationId', type: dynamodb.AttributeType.STRING },
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
-      removalPolicy: cdk.RemovalPolicy.DESTROY,
+      deletionProtection: true,
+      removalPolicy: cdk.RemovalPolicy.RETAIN,
     });
 
     // userIdのGSI（ソートキーはcreatedAt）
@@ -104,7 +111,8 @@ const dailyLogTable = new dynamodb.Table(this, 'DailyLogTable', {
   partitionKey: { name: 'habitId', type: dynamodb.AttributeType.STRING },
   sortKey: { name: 'date', type: dynamodb.AttributeType.STRING },
   billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
-  removalPolicy: cdk.RemovalPolicy.DESTROY,
+  deletionProtection: true,
+  removalPolicy: cdk.RemovalPolicy.RETAIN,
 });
 
 // userIdのGSI
@@ -119,7 +127,8 @@ const expenseLogTable = new dynamodb.Table(this, 'ExpenseLogTable', {
   tableName: 'declaration-app-expense-logs',
   partitionKey: { name: 'expenseId', type: dynamodb.AttributeType.STRING },
   billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
-  removalPolicy: cdk.RemovalPolicy.DESTROY,
+  deletionProtection: true,
+  removalPolicy: cdk.RemovalPolicy.RETAIN,
 });
 
 // declarationIdのGSI
@@ -134,7 +143,8 @@ const contactTable = new dynamodb.Table(this, 'ContactTable', {
   tableName: 'declaration-app-contacts',
   partitionKey: { name: 'contactId', type: dynamodb.AttributeType.STRING },
   billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
-  removalPolicy: cdk.RemovalPolicy.DESTROY,
+  deletionProtection: true,
+  removalPolicy: cdk.RemovalPolicy.RETAIN,
 });
 
 contactTable.addGlobalSecondaryIndex({
@@ -164,8 +174,8 @@ const ogpBucket = new s3.Bucket(this, 'OgpBucket', {
       allowedHeaders: ['*'],
     },
   ],
-  removalPolicy: cdk.RemovalPolicy.DESTROY,
-  autoDeleteObjects: true,
+  removalPolicy: cdk.RemovalPolicy.RETAIN,
+  autoDeleteObjects: false,
 });
 
   new cdk.CfnOutput(this, 'OgpBucketName', { value: ogpBucket.bucketName });
