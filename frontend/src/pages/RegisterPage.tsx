@@ -50,7 +50,7 @@ const RegisterPage = () => {
   if (step === 'confirm') {
     return (
       <div className="min-h-screen bg-gray-950 flex items-center justify-center px-4">
-        <div className="absolute right-4 top-4">
+        <div className="auth-language-toggle">
           <LanguageToggle />
         </div>
         <div className="w-full max-w-md">
@@ -94,7 +94,7 @@ const RegisterPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-950 flex items-center justify-center px-4">
-      <div className="absolute right-4 top-4">
+      <div className="auth-language-toggle">
         <LanguageToggle />
       </div>
       <div className="w-full max-w-md">
