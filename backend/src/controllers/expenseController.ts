@@ -379,6 +379,53 @@ export const updateExpense = async (req: AuthRequest, res: Response): Promise<vo
   }
 
   try {
+    const expenseResult = await docClient.send(
+      new GetCommand({
+        TableName: TABLES.DECLARATIONS,
+        Key: { declarationId: id },
+      })
+    );
+    const expense = expenseResult.Item;
+    if (!expense || expense.userId !== req.userId || expense.type !== 'expense') {
+      res.status(404).json({ message: '支出管理が見つかりません' });
+      return;
+    }
+
+    const userResult = await docClient.send(
+      new GetCommand({
+        TableName: TABLES.USERS,
+        Key: { userId: req.userId },
+      })
+    );
+    const expensesResult = await docClient.send(
+      new QueryCommand({
+        TableName: TABLES.DECLARATIONS,
+        IndexName: 'userId-createdAt-index',
+        KeyConditionExpression: 'userId = :userId',
+        FilterExpression: '#type = :type AND #status = :status',
+        ExpressionAttributeNames: {
+          '#type': 'type',
+          '#status': 'status',
+        },
+        ExpressionAttributeValues: {
+          ':userId': req.userId,
+          ':type': 'expense',
+          ':status': 'active',
+        },
+      })
+    );
+    const isLocked = isItemLockedForFreePlan(
+      expensesResult.Items ?? [],
+      id,
+      FREE_LIMITS.activeExpenses,
+      (item) => item.status === 'active',
+      hasPremiumAccess(userResult.Item)
+    );
+    if (isLocked) {
+      res.status(403).json({ message: 'この支出管理はPremiumで再開できます。' });
+      return;
+    }
+
     await docClient.send(
       new UpdateCommand({
         TableName: TABLES.DECLARATIONS,

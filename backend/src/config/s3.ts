@@ -5,5 +5,5 @@ export const s3Client = new S3Client({
 });
 
 export const S3_CONFIG = {
-  BUCKET_NAME: 'declaration-app-ogp-images',
+  BUCKET_NAME: process.env.OGP_BUCKET_NAME ?? 'declaration-app-ogp-images',
 };

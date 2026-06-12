@@ -8,6 +8,8 @@ import ExpenseCard from '../components/ExpenseCard.js';
 import Navigation from '../components/Navigation.js';
 import { confirmCheckoutSession, createCheckoutSession } from '../utils/api.js';
 import { useLanguage } from '../i18n.js';
+import LoadingPage from '../components/LoadingPage.js';
+import { useRouteTransition } from '../contexts/RouteTransitionContext.js';
 
 type Currency = 'JPY' | 'USD';
 
@@ -78,6 +80,8 @@ const MyPage = () => {
   const [error, setError] = useState('');
   const [calendarMonth, setCalendarMonth] = useState(() => new Date().toISOString().slice(0, 7));
   const [calendarDays, setCalendarDays] = useState<CalendarDay[]>([]);
+  const isPageLoading = authLoading || loading || confirmingSubscription;
+  const { navigateWithTransition } = useRouteTransition();
 
   const fetchDeclarations = useCallback(async () => {
     try {
@@ -86,7 +90,7 @@ const MyPage = () => {
     } catch {
       setError(t('declarationFetchFailed'));
     }
-  }, []);
+  }, [t]);
 
   const fetchHabits = useCallback(async () => {
     try {
@@ -201,12 +205,8 @@ const MyPage = () => {
     setCalendarMonth(`${year}-${month}`);
   };
 
-  if (authLoading || loading || confirmingSubscription) {
-    return (
-      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
-        <p className="text-gray-400">{t('loading')}</p>
-      </div>
-    );
+  if (isPageLoading) {
+    return <LoadingPage active={isPageLoading} />;
   }
 
   return (
@@ -363,7 +363,7 @@ const MyPage = () => {
             <p className="text-white font-bold text-lg">{t('emptyHomeTitle')}</p>
             <p className="text-gray-400 text-sm mt-2">{t('emptyHomeLead')}</p>
             <button
-              onClick={() => navigate('/tasks')}
+              onClick={() => navigateWithTransition('/tasks')}
               className="mt-4 px-6 py-3 bg-white text-gray-950 font-bold rounded-xl hover:bg-gray-200 transition-colors"
             >
               {t('declareTask')}

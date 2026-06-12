@@ -4,11 +4,14 @@ import Navigation from '../components/Navigation.js';
 import { useAuth } from '../hooks/useAuth.js';
 import { useLanguage } from '../i18n.js';
 import api from '../utils/api.js';
+import LoadingPage from '../components/LoadingPage.js';
+import { useRouteTransition } from '../contexts/RouteTransitionContext.js';
 
 const CancelPremiumPage = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const { t } = useLanguage();
+  const { navigateWithTransition } = useRouteTransition();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [scheduled, setScheduled] = useState(false);
@@ -38,11 +41,7 @@ const CancelPremiumPage = () => {
   };
 
   if (authLoading || !user) {
-    return (
-      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
-        <p className="text-gray-400">{t('loading')}</p>
-      </div>
-    );
+    return <LoadingPage active={authLoading || !user} />;
   }
 
   return (
@@ -60,7 +59,7 @@ const CancelPremiumPage = () => {
               <p className="text-gray-400 leading-relaxed">{t('premiumCancelScheduled')}</p>
               <button
                 type="button"
-                onClick={() => navigate('/profile')}
+                onClick={() => navigateWithTransition('/profile')}
                 className="w-full sm:w-auto px-6 py-3 bg-white text-gray-950 font-semibold rounded-xl hover:bg-gray-200 transition-colors"
               >
                 {t('backToProfile')}
@@ -91,7 +90,7 @@ const CancelPremiumPage = () => {
               <div className="flex flex-col sm:flex-row gap-3">
                 <button
                   type="button"
-                  onClick={() => navigate('/profile')}
+                  onClick={() => navigateWithTransition('/profile')}
                   className="flex-1 py-3 bg-white text-gray-950 font-semibold rounded-xl hover:bg-gray-200 transition-colors"
                 >
                   {t('cancelPremiumKeep')}
@@ -111,7 +110,7 @@ const CancelPremiumPage = () => {
               <p className="text-gray-400 leading-relaxed">{t('cancelPremiumNotActive')}</p>
               <button
                 type="button"
-                onClick={() => navigate('/profile')}
+                onClick={() => navigateWithTransition('/profile')}
                 className="w-full sm:w-auto px-6 py-3 bg-white text-gray-950 font-semibold rounded-xl hover:bg-gray-200 transition-colors"
               >
                 {t('backToProfile')}

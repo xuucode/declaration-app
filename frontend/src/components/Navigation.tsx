@@ -1,16 +1,17 @@
 import { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth.js';
 import structHomeLogo from '../assets/struct-home.png';
 import LanguageToggle from './LanguageToggle.js';
 import { useLanguage } from '../i18n.js';
+import { useRouteTransition } from '../contexts/RouteTransitionContext.js';
 
 const Navigation = () => {
   const [menuOpen, setMenuOpen] = useState(false);
-  const navigate = useNavigate();
   const location = useLocation();
   const { logout } = useAuth();
   const { t } = useLanguage();
+  const { navigateWithTransition } = useRouteTransition();
 
   const navItems = [
     { label: t('navHome'), path: '/mypage' },
@@ -24,7 +25,7 @@ const Navigation = () => {
     <header className="app-header border-b border-gray-800 px-4 py-3 bg-gray-950 sticky top-0 z-10">
       <div className="max-w-2xl mx-auto flex justify-between items-center gap-4">
         <button
-          onClick={() => navigate('/mypage')}
+          onClick={() => navigateWithTransition('/mypage')}
           className="nav-brand"
           aria-label="Struct home"
         >
@@ -53,7 +54,7 @@ const Navigation = () => {
         {navItems.map((item) => (
           <button
             key={item.path}
-            onClick={() => navigate(item.path)}
+            onClick={() => navigateWithTransition(item.path)}
             className={`nav-tab flex-1 px-3 py-2 rounded-lg text-sm font-semibold transition-colors
               ${location.pathname === item.path
                 ? 'nav-tab-active bg-white text-gray-950'
@@ -72,7 +73,7 @@ const Navigation = () => {
             {navItems.map((item) => (
               <button
                 key={item.path}
-                onClick={() => { navigate(item.path); setMenuOpen(false); }}
+                onClick={() => { setMenuOpen(false); navigateWithTransition(item.path); }}
                 className={`nav-mobile-item w-full text-left px-4 py-3 rounded-lg text-sm font-semibold transition-colors
                   ${location.pathname === item.path
                     ? 'nav-tab-active bg-white text-gray-950'

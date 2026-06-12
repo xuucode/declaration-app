@@ -5,11 +5,14 @@ import { useAuth } from '../hooks/useAuth.js';
 import Navigation from '../components/Navigation.js';
 import { clearTokens } from '../utils/auth.js';
 import { useLanguage } from '../i18n.js';
+import LoadingPage from '../components/LoadingPage.js';
+import { useRouteTransition } from '../contexts/RouteTransitionContext.js';
 
 const ProfilePage = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const { t } = useLanguage();
+  const { navigateWithTransition } = useRouteTransition();
 
   const [displayName, setDisplayName] = useState(user?.displayName ?? '');
   const [goal, setGoal] = useState(user?.goal ?? '');
@@ -122,11 +125,7 @@ const ProfilePage = () => {
   };
 
   if (authLoading) {
-    return (
-      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
-        <p className="text-gray-400">{t('loading')}</p>
-      </div>
-    );
+    return <LoadingPage active={authLoading} />;
   }
 
   return (
@@ -293,7 +292,7 @@ const ProfilePage = () => {
             {!cancelScheduled && (
               <button
                 type="button"
-                onClick={() => navigate('/cancel-premium')}
+                onClick={() => navigateWithTransition('/cancel-premium')}
                 className="w-full py-3 bg-red-900/30 border border-red-800 text-red-300 font-semibold rounded-xl hover:bg-red-900/50 transition-colors"
               >
                 {t('cancelPremium')}

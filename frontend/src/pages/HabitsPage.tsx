@@ -6,6 +6,7 @@ import HabitCard from '../components/HabitCard.js';
 import Navigation from '../components/Navigation.js';
 import { createCheckoutSession } from '../utils/api.js';
 import { useLanguage } from '../i18n.js';
+import LoadingPage from '../components/LoadingPage.js';
 
 interface Habit {
   declarationId: string;
@@ -34,6 +35,7 @@ const HabitsPage = () => {
   const [limitType, setLimitType] = useState<'binary' | 'count'>('binary');
   const [limitValue, setLimitValue] = useState('');
   const [error, setError] = useState('');
+  const isPageLoading = authLoading || loading;
 
   const fetchHabits = useCallback(async () => {
     try {
@@ -92,12 +94,8 @@ const HabitsPage = () => {
     }
   };
 
-  if (authLoading || loading) {
-    return (
-      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
-        <p className="text-gray-400">{t('loading')}</p>
-      </div>
-    );
+  if (isPageLoading) {
+    return <LoadingPage active={isPageLoading} />;
   }
 
   return (

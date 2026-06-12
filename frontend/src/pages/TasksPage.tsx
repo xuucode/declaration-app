@@ -7,6 +7,8 @@ import ShareButton from '../components/ShareButton.js';
 import Navigation from '../components/Navigation.js';
 import { createCheckoutSession } from '../utils/api.js';
 import { useLanguage } from '../i18n.js';
+import LoadingPage from '../components/LoadingPage.js';
+import { useRouteTransition } from '../contexts/RouteTransitionContext.js';
 
 interface Declaration {
   declarationId: string;
@@ -35,6 +37,8 @@ const TasksPage = () => {
   const [error, setError] = useState('');
   const [isCustomDeadline, setIsCustomDeadline] = useState(false);
   const [confirmedDeclaration, setConfirmedDeclaration] = useState<Declaration | null>(null);
+  const isPageLoading = authLoading || loading;
+  const { navigateWithTransition } = useRouteTransition();
 
   const fetchDeclarations = useCallback(async () => {
     try {
@@ -43,7 +47,7 @@ const TasksPage = () => {
     } catch {
       setError(t('declarationFetchFailed'));
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -92,12 +96,8 @@ const TasksPage = () => {
     }
   };
 
-  if (authLoading || loading) {
-    return (
-      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
-        <p className="text-gray-400">{t('loading')}</p>
-      </div>
-    );
+  if (isPageLoading) {
+    return <LoadingPage active={isPageLoading} />;
   }
 
   return (
@@ -325,7 +325,7 @@ const TasksPage = () => {
             ))
         )}
         <button
-          onClick={() => navigate('/tasks/history')}
+          onClick={() => navigateWithTransition('/tasks/history')}
           className="w-full py-3 bg-gray-900 border border-gray-800 text-gray-400 hover:text-white rounded-xl text-sm transition-colors mt-4"
         >
           {t('viewCompletedTasks')}

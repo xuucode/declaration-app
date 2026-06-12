@@ -39,6 +39,8 @@ export const useAuth = () => {
   }, []);
 
   useEffect(() => {
+    // Initial authentication sync is intentionally kicked off once on mount.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     refreshUser();
   }, [refreshUser]);
 

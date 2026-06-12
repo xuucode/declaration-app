@@ -31,14 +31,13 @@ const HabitCard = ({ habit, onUpdate }: HabitCardProps) => {
   const [error, setError] = useState('');
   const [logResult, setLogResult] = useState<'achieved' | 'failed' | null>(null);
   const [requiresShare, setRequiresShare] = useState(false);
-  const [checkingLog, setCheckingLog] = useState(true);
+  const [checkingLog, setCheckingLog] = useState(!habit.isLocked);
   const [todayLogShared, setTodayLogShared] = useState(false);
   const achievedCount = habit.achievedCount ?? 0;
   const totalCount = habit.totalCount ?? 0;
 
   useEffect(() => {
     if (habit.isLocked) {
-      setCheckingLog(false);
       return;
     }
 

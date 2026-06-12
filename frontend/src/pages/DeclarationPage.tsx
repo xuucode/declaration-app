@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import api from '../utils/api.js';
 import LanguageToggle from '../components/LanguageToggle.js';
 import { useLanguage } from '../i18n.js';
+import LoadingPage from '../components/LoadingPage.js';
 
 interface Declaration {
   declarationId: string;
@@ -50,7 +51,7 @@ const DeclarationPage = () => {
       }
     };
     fetchDeclaration();
-  }, [id]);
+  }, [id, t]);
 
   const statusConfig = {
     pending: {
@@ -74,11 +75,7 @@ const DeclarationPage = () => {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
-        <p className="text-gray-400">{t('loading')}</p>
-      </div>
-    );
+    return <LoadingPage active={loading} />;
   }
 
   if (error || !declaration) {

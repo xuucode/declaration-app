@@ -15,29 +15,32 @@ import TermsPage from './pages/TermsPage.js';
 import PrivacyPage from './pages/PrivacyPage.js';
 import CommercialTransactionPage from './pages/CommercialTransactionPage.js';
 import { LanguageProvider } from './i18n.js';
+import { RouteTransitionProvider } from './contexts/RouteTransitionContext.js';
 
 const App = () => {
   return (
     <LanguageProvider>
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Navigate to="/login" replace />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
-          <Route path="/mypage" element={<MyPage />} />
-          <Route path="/habits" element={<HabitsPage />} />
-          <Route path="/expenses" element={<ExpensesPage />} />
-          <Route path="/declarations/:id" element={<DeclarationPage />} />
-          <Route path="/tasks" element={<TasksPage />} />
-          <Route path="/tasks/history" element={<TaskHistoryPage />} />
-          <Route path="/profile" element={<ProfilePage />} />
-          <Route path="/cancel-premium" element={<CancelPremiumPage />} />
-          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-          <Route path="/contact" element={<ContactPage />} />
-          <Route path="/terms" element={<TermsPage />} />
-          <Route path="/privacy" element={<PrivacyPage />} />
-          <Route path="/commercial-transaction" element={<CommercialTransactionPage />} />
-        </Routes>
+        <RouteTransitionProvider>
+          <Routes>
+            <Route path="/" element={<Navigate to="/login" replace />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+            <Route path="/mypage" element={<MyPage />} />
+            <Route path="/habits" element={<HabitsPage />} />
+            <Route path="/expenses" element={<ExpensesPage />} />
+            <Route path="/declarations/:id" element={<DeclarationPage />} />
+            <Route path="/tasks" element={<TasksPage />} />
+            <Route path="/tasks/history" element={<TaskHistoryPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/cancel-premium" element={<CancelPremiumPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/contact" element={<ContactPage />} />
+            <Route path="/terms" element={<TermsPage />} />
+            <Route path="/privacy" element={<PrivacyPage />} />
+            <Route path="/commercial-transaction" element={<CommercialTransactionPage />} />
+          </Routes>
+        </RouteTransitionProvider>
       </BrowserRouter>
     </LanguageProvider>
   );

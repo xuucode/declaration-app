@@ -2,11 +2,41 @@ import * as cdk from 'aws-cdk-lib';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as cognito from 'aws-cdk-lib/aws-cognito';
+import * as apigateway from 'aws-cdk-lib/aws-apigateway';
+import * as iam from 'aws-cdk-lib/aws-iam';
+import * as lambda from 'aws-cdk-lib/aws-lambda';
+import * as path from 'path';
 import { Construct } from 'constructs';
 
 export class InfraStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
+
+    const frontendUrl = new cdk.CfnParameter(this, 'FrontendUrl', {
+      type: 'String',
+      default: 'http://localhost:5173',
+      description: 'Frontend URL allowed by CORS and used for Stripe redirects.',
+    });
+
+    const stripeSecretKey = new cdk.CfnParameter(this, 'StripeSecretKey', {
+      type: 'String',
+      noEcho: true,
+      default: '',
+      description: 'Stripe secret key.',
+    });
+
+    const stripePriceId = new cdk.CfnParameter(this, 'StripePriceId', {
+      type: 'String',
+      default: '',
+      description: 'Stripe Premium price ID.',
+    });
+
+    const stripeWebhookSecret = new cdk.CfnParameter(this, 'StripeWebhookSecret', {
+      type: 'String',
+      noEcho: true,
+      default: '',
+      description: 'Stripe webhook signing secret.',
+    });
 
     // Cognitoユーザープール
     const userPool = new cognito.UserPool(this, 'UserPool', {
@@ -133,6 +163,76 @@ const ogpBucket = new s3.Bucket(this, 'OgpBucket', {
 });
 
   new cdk.CfnOutput(this, 'OgpBucketName', { value: ogpBucket.bucketName });
+
+    const backendPath = path.join(__dirname, '../../backend');
+    const apiHandler = new lambda.Function(this, 'BackendApiHandler', {
+      runtime: lambda.Runtime.NODEJS_22_X,
+      architecture: lambda.Architecture.ARM_64,
+      handler: 'dist/lambda.handler',
+      memorySize: 1024,
+      timeout: cdk.Duration.seconds(30),
+      code: lambda.Code.fromAsset(backendPath, {
+        bundling: {
+          image: lambda.Runtime.NODEJS_22_X.bundlingImage,
+          command: [
+            'bash',
+            '-c',
+            [
+              'export npm_config_cache=/tmp/.npm',
+              'cp package.json package-lock.json tsconfig.json /asset-output/',
+              'cp -R src /asset-output/src',
+              'cd /asset-output',
+              'npm ci',
+              'npm run build',
+              'npm prune --omit=dev',
+              'rm -rf src tsconfig.json',
+            ].join(' && '),
+          ],
+        },
+      }),
+      environment: {
+        NODE_ENV: 'production',
+        TRUST_PROXY: 'true',
+        FRONTEND_URL: frontendUrl.valueAsString,
+        COGNITO_USER_POOL_ID: userPool.userPoolId,
+        COGNITO_CLIENT_ID: userPoolClient.userPoolClientId,
+        OGP_BUCKET_NAME: ogpBucket.bucketName,
+        STRIPE_SECRET_KEY: stripeSecretKey.valueAsString,
+        STRIPE_PRICE_ID: stripePriceId.valueAsString,
+        STRIPE_WEBHOOK_SECRET: stripeWebhookSecret.valueAsString,
+      },
+    });
+
+    userTable.grantReadWriteData(apiHandler);
+    declarationTable.grantReadWriteData(apiHandler);
+    dailyLogTable.grantReadWriteData(apiHandler);
+    expenseLogTable.grantReadWriteData(apiHandler);
+    contactTable.grantReadWriteData(apiHandler);
+    ogpBucket.grantPut(apiHandler);
+
+    apiHandler.addToRolePolicy(new iam.PolicyStatement({
+      actions: [
+        'cognito-idp:SignUp',
+        'cognito-idp:ConfirmSignUp',
+        'cognito-idp:InitiateAuth',
+        'cognito-idp:ChangePassword',
+        'cognito-idp:UpdateUserAttributes',
+        'cognito-idp:ForgotPassword',
+        'cognito-idp:ConfirmForgotPassword',
+      ],
+      resources: ['*'],
+    }));
+
+    const api = new apigateway.LambdaRestApi(this, 'BackendApi', {
+      handler: apiHandler,
+      proxy: true,
+      deployOptions: {
+        stageName: 'prod',
+      },
+    });
+    apiHandler.addEnvironment('PUBLIC_API_URL', api.url);
+
+    new cdk.CfnOutput(this, 'BackendApiUrl', { value: api.url });
 
     // 出力
     new cdk.CfnOutput(this, 'UserPoolId', { value: userPool.userPoolId });

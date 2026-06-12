@@ -5,6 +5,6 @@ export const cognitoClient = new CognitoIdentityProviderClient({
 });
 
 export const COGNITO_CONFIG = {
-  USER_POOL_ID: 'ap-northeast-1_k9yyQfpSi',
-  CLIENT_ID: '16sdcij90mnpn1rfeubi47f0cj',
+  USER_POOL_ID: process.env.COGNITO_USER_POOL_ID ?? 'ap-northeast-1_k9yyQfpSi',
+  CLIENT_ID: process.env.COGNITO_CLIENT_ID ?? '16sdcij90mnpn1rfeubi47f0cj',
 };

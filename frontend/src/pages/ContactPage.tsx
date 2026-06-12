@@ -19,6 +19,8 @@ const ContactPage = () => {
 
   useEffect(() => {
     if (!user) return;
+    // Prefill contact fields after the authenticated user is loaded.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setName(user.displayName ?? '');
     setEmail(user.email ?? '');
   }, [user]);

@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 
 type Language = 'ja' | 'en';
@@ -78,8 +79,8 @@ const translations = {
     publicCommitmentAction: '公開宣言する',
     publicProgressShare: '進捗を公開する',
     publicFailureReport: '失敗を公開報告する',
-    publicCommitmentBadge: 'Xで公開中',
-    privateCommitmentBadge: '自分の中だけ',
+    publicCommitmentBadge: 'Xで公開',
+    privateCommitmentBadge: '❌ 未共有',
     reduceEscapeTitle: '逃げ道を減らす',
     privateCommitmentLead: 'まだ自分の中だけの宣言です。Xに置くと、見られている約束になります。',
     publicProgressTitle: '公開中の進捗',
@@ -452,7 +453,7 @@ const translations = {
     publicProgressShare: 'Share progress',
     publicFailureReport: 'Report failure publicly',
     publicCommitmentBadge: 'Public on X',
-    privateCommitmentBadge: 'Private only',
+    privateCommitmentBadge: '❌ Unshared',
     reduceEscapeTitle: 'Reduce escape routes',
     privateCommitmentLead: 'This commitment is still only inside your own head. Put it on X to make it visible.',
     publicProgressTitle: 'Public progress',

@@ -5,6 +5,8 @@ import { useAuth } from '../hooks/useAuth.js';
 import DeclarationCard from '../components/DeclarationCard.js';
 import Navigation from '../components/Navigation.js';
 import { useLanguage } from '../i18n.js';
+import LoadingPage from '../components/LoadingPage.js';
+import { useRouteTransition } from '../contexts/RouteTransitionContext.js';
 
 interface Declaration {
   declarationId: string;
@@ -28,6 +30,7 @@ const TaskHistoryPage = () => {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'done' | 'failed'>('all');
   const [error, setError] = useState('');
+  const { navigateWithTransition } = useRouteTransition();
 
   const fetchDeclarations = useCallback(async () => {
     try {
@@ -36,7 +39,7 @@ const TaskHistoryPage = () => {
     } catch {
       setError(t('declarationFetchFailed'));
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -56,11 +59,7 @@ const TaskHistoryPage = () => {
     : declarations.filter((d) => d.status === filter);
 
   if (authLoading || loading) {
-    return (
-      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
-        <p className="text-gray-400">{t('loading')}</p>
-      </div>
-    );
+    return <LoadingPage active={authLoading || loading} />;
   }
 
   return (
@@ -69,7 +68,7 @@ const TaskHistoryPage = () => {
       <div className="max-w-2xl mx-auto px-4 py-8">
         <div className="flex items-center gap-4 mb-6">
           <button
-            onClick={() => navigate('/tasks')}
+            onClick={() => navigateWithTransition('/tasks')}
             className="text-gray-400 hover:text-white transition-colors"
           >
             {t('back')}

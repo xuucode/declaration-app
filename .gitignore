@@ -1,0 +1,6 @@
+node_modules/
+dist/
+cdk.out/
+
+*.exe
+Docker Desktop Installer.exe

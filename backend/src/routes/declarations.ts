@@ -3,6 +3,7 @@ import {
   getDeclarations,
   createDeclaration,
   getDeclaration,
+  getDeclarationSharePage,
   updateDeclarationStatus,
   markAsShared,
   markAsPublicShared,
@@ -14,6 +15,7 @@ const router = Router();
 
 router.get('/', authMiddleware, getDeclarations);
 router.post('/', authMiddleware, createDeclaration);
+router.get('/:id/share', getDeclarationSharePage);
 router.get('/:id', getDeclaration);
 router.patch('/:id/status', authMiddleware, updateDeclarationStatus);
 router.patch('/:id/public-shared', authMiddleware, markAsPublicShared);

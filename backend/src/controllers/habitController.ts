@@ -293,6 +293,18 @@ export const getHabitLogs = async (req: AuthRequest, res: Response): Promise<voi
   const id = req.params['id'] as string;
 
   try {
+    const habitResult = await docClient.send(
+      new GetCommand({
+        TableName: TABLES.DECLARATIONS,
+        Key: { declarationId: id },
+      })
+    );
+    const habit = habitResult.Item;
+    if (!habit || habit.userId !== req.userId || habit.type !== 'habit') {
+      res.status(404).json({ message: '習慣が見つかりません' });
+      return;
+    }
+
     const result = await docClient.send(
       new QueryCommand({
         TableName: TABLES.DAILY_LOGS,
@@ -363,6 +375,18 @@ export const deleteHabit = async (req: AuthRequest, res: Response): Promise<void
   const id = req.params['id'] as string;
 
   try {
+    const habitResult = await docClient.send(
+      new GetCommand({
+        TableName: TABLES.DECLARATIONS,
+        Key: { declarationId: id },
+      })
+    );
+    const habit = habitResult.Item;
+    if (!habit || habit.userId !== req.userId || habit.type !== 'habit') {
+      res.status(404).json({ message: '習慣が見つかりません' });
+      return;
+    }
+
     await docClient.send(
       new DeleteCommand({
         TableName: TABLES.DECLARATIONS,

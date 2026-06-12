@@ -80,7 +80,7 @@ const DeclarationCard = ({ declaration, onUpdate, onStatusConfirmed }: Declarati
               {t('publicCommitmentBadge')}
             </span>
           ) : (
-            <span className="text-xs px-3 py-1 rounded-full border whitespace-nowrap bg-gray-800 text-gray-500 border-gray-700">
+            <span className="text-xs px-3 py-1 rounded-full border whitespace-nowrap bg-red-900/30 text-red-400 border-red-800">
               {t('privateCommitmentBadge')}
             </span>
           )}

@@ -8,6 +8,42 @@ import { OgpType } from '../ogp/generateOgp.js';
 import { hasPremiumAccess } from '../utils/subscription.js';
 import { FREE_LIMITS, isItemLockedForFreePlan, markLockedItems } from '../utils/premiumLimits.js';
 
+const trimTrailingSlash = (value: string): string => value.replace(/\/+$/, '');
+
+const escapeHtml = (value: string): string =>
+  value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
+const getFrontendUrl = (): string => trimTrailingSlash(process.env.FRONTEND_URL ?? 'http://localhost:5173');
+
+const getPublicApiUrl = (req: Request): string =>
+  trimTrailingSlash(process.env.PUBLIC_API_URL ?? `${req.protocol}://${req.get('host')}`);
+
+const getDeclarationTypeLabel = (type: string): string => {
+  if (type === 'habit') return '習慣';
+  if (type === 'expense') return '支出管理';
+  return 'タスク';
+};
+
+const buildShareDescription = (declaration: Record<string, any>, displayName: string): string => {
+  const owner = displayName ? `${displayName}さんが` : '';
+  const typeLabel = getDeclarationTypeLabel(declaration.type ?? 'task');
+
+  if (declaration.status === 'done') {
+    return `${owner}Structで${typeLabel}の達成を公開報告しました。SNS共有によるパブリック・コミットメントで、行動を継続します。`;
+  }
+
+  if (declaration.status === 'failed') {
+    return `${owner}Structで${typeLabel}の未達成を公開報告しました。失敗も可視化して、次の行動につなげます。`;
+  }
+
+  return `${owner}Structで${typeLabel}を公開宣言しました。SNS共有によるパブリック・コミットメントで、目標達成に向けた行動を続けます。`;
+};
+
 const resetShareStreak = async (userId: string): Promise<void> => {
   await docClient.send(
     new UpdateCommand({
@@ -244,6 +280,71 @@ export const getDeclaration = async (req: Request, res: Response): Promise<void>
       shareStreakCount: userResult.Item?.shareStreakCount ?? 0,
       publicStats,
     });
+  } catch (e: any) {
+    res.status(500).json({ message: e.message });
+  }
+};
+
+// Xなどのbotに宣言ごとのOGPを返す共有用HTML（認証不要）
+export const getDeclarationSharePage = async (req: Request, res: Response): Promise<void> => {
+  const id = req.params['id'] as string;
+
+  try {
+    const result = await docClient.send(
+      new GetCommand({
+        TableName: TABLES.DECLARATIONS,
+        Key: { declarationId: id },
+      })
+    );
+
+    if (!result.Item) {
+      res.status(404).send('<!doctype html><html lang="ja"><body>宣言が見つかりません</body></html>');
+      return;
+    }
+
+    const declaration = result.Item;
+    const userResult = await docClient.send(
+      new GetCommand({
+        TableName: TABLES.USERS,
+        Key: { userId: declaration.userId },
+      })
+    );
+
+    const frontendUrl = getFrontendUrl();
+    const publicApiUrl = getPublicApiUrl(req);
+    const publicPageUrl = `${frontendUrl}/declarations/${encodeURIComponent(id)}`;
+    const sharePageUrl = `${publicApiUrl}/declarations/${encodeURIComponent(id)}/share`;
+    const fallbackImageUrl = `${frontendUrl}/struct.png`;
+    const imageUrl = declaration.ogpImageUrl || fallbackImageUrl;
+    const title = `Struct | ${declaration.title ?? '公開宣言'}`;
+    const description = buildShareDescription(declaration, userResult.Item?.displayName ?? '');
+
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader('Cache-Control', 'public, max-age=300, s-maxage=300');
+    res.status(200).send(`<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>${escapeHtml(title)}</title>
+    <meta name="description" content="${escapeHtml(description)}" />
+    <link rel="canonical" href="${escapeHtml(publicPageUrl)}" />
+    <meta property="og:site_name" content="Struct" />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="${escapeHtml(title)}" />
+    <meta property="og:description" content="${escapeHtml(description)}" />
+    <meta property="og:url" content="${escapeHtml(sharePageUrl)}" />
+    <meta property="og:image" content="${escapeHtml(imageUrl)}" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="${escapeHtml(title)}" />
+    <meta name="twitter:description" content="${escapeHtml(description)}" />
+    <meta name="twitter:image" content="${escapeHtml(imageUrl)}" />
+    <meta http-equiv="refresh" content="0;url=${escapeHtml(publicPageUrl)}" />
+  </head>
+  <body>
+    <p><a href="${escapeHtml(publicPageUrl)}">Structの公開宣言を見る</a></p>
+  </body>
+</html>`);
   } catch (e: any) {
     res.status(500).json({ message: e.message });
   }

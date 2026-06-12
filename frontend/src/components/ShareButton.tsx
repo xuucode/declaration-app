@@ -1,4 +1,5 @@
 import { useLanguage } from '../i18n.js';
+import api from '../utils/api.js';
 
 interface ShareButtonProps {
   declarationId: string;
@@ -10,7 +11,9 @@ interface ShareButtonProps {
 
 const ShareButton = ({ declarationId, title, type, detail, onShare }: ShareButtonProps) => {
   const { language, t } = useLanguage();
-  const url = `${window.location.origin}/declarations/${declarationId}`;
+  const apiBaseUrl = import.meta.env.VITE_PUBLIC_API_URL ?? api.defaults.baseURL ?? window.location.origin;
+  const normalizedApiBaseUrl = apiBaseUrl.endsWith('/') ? apiBaseUrl : `${apiBaseUrl}/`;
+  const url = new URL(`declarations/${declarationId}/share`, normalizedApiBaseUrl).toString();
   const text = language === 'ja'
     ? (type === 'declaration'
       ? `逃げ道を減らすために、Structで公開宣言しました。「${title}」をやります。見届けてください。`
