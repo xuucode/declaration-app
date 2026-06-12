@@ -6,13 +6,15 @@ import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-// フォントの読み込み
-const fontRegular = readFileSync(
-  join(__dirname, '../../fonts/NotoSansJP-Regular.ttf')
-);
-const fontBold = readFileSync(
-  join(__dirname, '../../fonts/NotoSansJP-Bold.ttf')
-);
+let fontRegular: Buffer | undefined;
+let fontBold: Buffer | undefined;
+
+const loadFonts = () => {
+  fontRegular ??= readFileSync(join(__dirname, '../../fonts/NotoSansJP-Regular.ttf'));
+  fontBold ??= readFileSync(join(__dirname, '../../fonts/NotoSansJP-Bold.ttf'));
+
+  return { fontRegular, fontBold };
+};
 
 export type OgpType = 'declaration' | 'done' | 'failed';
 
@@ -25,6 +27,7 @@ interface OgpOptions {
 
 export const generateOgpImage = async (options: OgpOptions): Promise<Buffer> => {
   const { type, title, displayName, streakCount } = options;
+  const fonts = loadFonts();
 
   const bgColor = type === 'done' ? '#1a8a4a' : type === 'failed' ? '#c0392b' : '#1a1a2e';
   const statusText = type === 'done' ? '🎉 達成しました！' : type === 'failed' ? '😔 未達成でした' : '🔥 宣言しました！';
@@ -88,8 +91,8 @@ export const generateOgpImage = async (options: OgpOptions): Promise<Buffer> => 
       width: 1200,
       height: 630,
       fonts: [
-        { name: 'NotoSansJP', data: fontRegular, weight: 400 },
-        { name: 'NotoSansJP', data: fontBold, weight: 700 },
+        { name: 'NotoSansJP', data: fonts.fontRegular, weight: 400 },
+        { name: 'NotoSansJP', data: fonts.fontBold, weight: 700 },
       ],
     }
   );

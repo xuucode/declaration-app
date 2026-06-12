@@ -187,6 +187,7 @@ const ogpBucket = new s3.Bucket(this, 'OgpBucket', {
               'export npm_config_cache=/tmp/.npm',
               'cp package.json package-lock.json tsconfig.json /asset-output/',
               'cp -R src /asset-output/src',
+              'cp -R fonts /asset-output/fonts',
               'cd /asset-output',
               'npm ci --include=optional',
               'npm install --save=false --os=linux --cpu=arm64 sharp',
