@@ -18,7 +18,8 @@ const escapeHtml = (value: string): string =>
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
 
-const getFrontendUrl = (): string => trimTrailingSlash(process.env.FRONTEND_URL || 'http://localhost:5173');
+const getFrontendUrl = (): string =>
+  trimTrailingSlash((process.env.FRONTEND_URL || 'http://localhost:5173').split(',')[0]?.trim() || 'http://localhost:5173');
 
 const getPublicApiUrl = (req: Request): string =>
   trimTrailingSlash(process.env.PUBLIC_API_URL || `${req.protocol}://${req.get('host')}`);

@@ -7,7 +7,10 @@ import { AuthRequest } from '../middleware/auth.js';
 const PREMIUM_STATUSES = new Set(['active', 'trialing']);
 const TERMINAL_STATUSES = new Set(['canceled', 'incomplete_expired', 'unpaid']);
 
-const getFrontendUrl = () => process.env.FRONTEND_URL ?? 'http://localhost:5173';
+const getFrontendUrl = () => (process.env.FRONTEND_URL ?? 'http://localhost:5173')
+  .split(',')[0]
+  .trim()
+  .replace(/\/+$/, '');
 
 const getUnixTime = (value: unknown): number | null => {
   const timestamp = Number(value);
