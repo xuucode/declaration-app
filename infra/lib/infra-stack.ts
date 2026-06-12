@@ -18,6 +18,12 @@ export class InfraStack extends cdk.Stack {
       description: 'Frontend URL allowed by CORS and used for Stripe redirects.',
     });
 
+    const publicApiUrl = new cdk.CfnParameter(this, 'PublicApiUrl', {
+      type: 'String',
+      default: '',
+      description: 'Public API Gateway URL. Set this after the first deploy, including the /prod stage path.',
+    });
+
     const stripeSecretKey = new cdk.CfnParameter(this, 'StripeSecretKey', {
       type: 'String',
       noEcho: true,
@@ -194,6 +200,7 @@ const ogpBucket = new s3.Bucket(this, 'OgpBucket', {
         NODE_ENV: 'production',
         TRUST_PROXY: 'true',
         FRONTEND_URL: frontendUrl.valueAsString,
+        PUBLIC_API_URL: publicApiUrl.valueAsString,
         COGNITO_USER_POOL_ID: userPool.userPoolId,
         COGNITO_CLIENT_ID: userPoolClient.userPoolClientId,
         OGP_BUCKET_NAME: ogpBucket.bucketName,
@@ -230,7 +237,6 @@ const ogpBucket = new s3.Bucket(this, 'OgpBucket', {
         stageName: 'prod',
       },
     });
-    apiHandler.addEnvironment('PUBLIC_API_URL', api.url);
 
     new cdk.CfnOutput(this, 'BackendApiUrl', { value: api.url });
 

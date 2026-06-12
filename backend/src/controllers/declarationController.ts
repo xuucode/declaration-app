@@ -18,10 +18,10 @@ const escapeHtml = (value: string): string =>
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
 
-const getFrontendUrl = (): string => trimTrailingSlash(process.env.FRONTEND_URL ?? 'http://localhost:5173');
+const getFrontendUrl = (): string => trimTrailingSlash(process.env.FRONTEND_URL || 'http://localhost:5173');
 
 const getPublicApiUrl = (req: Request): string =>
-  trimTrailingSlash(process.env.PUBLIC_API_URL ?? `${req.protocol}://${req.get('host')}`);
+  trimTrailingSlash(process.env.PUBLIC_API_URL || `${req.protocol}://${req.get('host')}`);
 
 const getDeclarationTypeLabel = (type: string): string => {
   if (type === 'habit') return '習慣';
